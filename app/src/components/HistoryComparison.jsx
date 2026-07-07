@@ -8,6 +8,11 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 
+const formatCu = (value) => `${(Number.parseFloat(value) || 0).toLocaleString('en-US', {
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 4
+})} CU`;
+
 export default function HistoryComparison({ onLoadWorkflow }) {
   const [estimations, setEstimations] = useState([]);
   const [workflows, setWorkflows] = useState([]);
@@ -165,7 +170,7 @@ export default function HistoryComparison({ onLoadWorkflow }) {
                 <Box sx={{ mt: 1 }}>
                   <Typography variant="body1">Monthly TCO: <strong>€{compareResult.est1.medianTco.toFixed(2)}</strong></Typography>
                   <Typography variant="body2" color="text.secondary">CPO: €{compareResult.est1.medianCpo.toFixed(3)}</Typography>
-                  <Typography variant="body2" color="text.secondary">CU-based EUR cost: {compareResult.est1.medianBtp.toFixed(1)}</Typography>
+                  <Typography variant="body2" color="text.secondary">CU monthly cost: {formatCu(compareResult.est1.medianBtp)}</Typography>
                 </Box>
               </Grid>
               
@@ -188,7 +193,7 @@ export default function HistoryComparison({ onLoadWorkflow }) {
                 <Box sx={{ mt: 1 }}>
                   <Typography variant="body1">Monthly TCO: <strong>€{compareResult.est2.medianTco.toFixed(2)}</strong></Typography>
                   <Typography variant="body2" color="text.secondary">CPO: €{compareResult.est2.medianCpo.toFixed(3)}</Typography>
-                  <Typography variant="body2" color="text.secondary">CU-based EUR cost: {compareResult.est2.medianBtp.toFixed(1)}</Typography>
+                  <Typography variant="body2" color="text.secondary">CU monthly cost: {formatCu(compareResult.est2.medianBtp)}</Typography>
                 </Box>
               </Grid>
             </Grid>

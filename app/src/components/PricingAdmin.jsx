@@ -16,8 +16,8 @@ const MODEL_REGISTRY_COLUMNS = [
   { field: 'description', label: 'API Description', align: 'left' },
   { field: 'contextWindowTokens', label: 'Context Length', align: 'right' },
   { field: 'capabilities', label: 'Capabilities', align: 'left' },
-  { field: 'genAiTokenInputRate', label: 'API Input Cost', align: 'right' },
-  { field: 'genAiTokenOutputRate', label: 'API Output Cost', align: 'right' },
+  { field: 'genAiTokenInputRate', label: 'Input Factor / 1K', align: 'right' },
+  { field: 'genAiTokenOutputRate', label: 'Output Factor / 1K', align: 'right' },
   { field: 'consumptionSource', label: 'Data source', align: 'left' },
   { field: 'supportsPromptCaching', label: 'Prompt Caching', align: 'center' },
   { field: 'supportsExtendedThinking', label: 'Extended Thinking', align: 'center' }
@@ -398,7 +398,7 @@ export default function PricingAdmin() {
           // Tab 1: AI Hub Model Discovery Registry
           <Box>
             <Alert severity="info" sx={{ m: 2, borderRadius: 2 }}>
-              This view shows model metadata returned by SAP AI Core Model Discovery plus API input/output cost fields from versions[].cost when available. Capacity Unit conversion and EUR/CU price are maintained in Global Heuristics Settings.
+              This view shows model metadata returned by SAP AI Core Model Discovery plus GenAI token conversion factors per 1,000 model tokens from versions[].cost when available. Capacity Unit conversion and EUR/CU price are maintained in Global Heuristics Settings.
             </Alert>
             <TableContainer component={Paper} elevation={0}>
             <Table sx={{ minWidth: 1680 }}>

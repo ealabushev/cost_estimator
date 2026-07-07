@@ -44,6 +44,22 @@ const PROVIDER_COLORS = {
   mistral: '#2e303a',
 };
 
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const toInteger = (value, fallback = 0) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const toBoolean = (value, fallback = false) => {
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+  return fallback;
+};
+
 // Preset Workflow Templates based on §4.D
 const TEMPLATE_PRESETS = [
   {
@@ -318,33 +334,33 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
             setExecutionMode(data.orchestrationPattern || 'sequential');
             setStateMode(data.stateMode || 'scoped_subgraph');
             setComplexityProfile(data.complexityProfile || 'standard');
-            setExpectedRoutingCycles(data.expectedRoutingCycles || 4);
-            setUseCustomRoutingCycles(Boolean(data.useCustomRoutingCycles));
-            setMonthlyRunVolume(data.monthlyRunVolume || 10000);
-            setPromptCachingEnabled(data.promptCachingEnabled ?? true);
-            setEstimatedCacheHitRate(data.estimatedCacheHitRate || 0.50);
+            setExpectedRoutingCycles(toNumber(data.expectedRoutingCycles, 4));
+            setUseCustomRoutingCycles(toBoolean(data.useCustomRoutingCycles));
+            setMonthlyRunVolume(toInteger(data.monthlyRunVolume, 10000));
+            setPromptCachingEnabled(toBoolean(data.promptCachingEnabled, true));
+            setEstimatedCacheHitRate(toNumber(data.estimatedCacheHitRate, 0.50));
             setSupervisorModelId(data.supervisorModel_ID || '');
             if (data.synthesizerModel_ID) setSynthesizerModelId(data.synthesizerModel_ID);
-            setSupervisorSystemPromptTokens(data.supervisorSystemPromptTokens || 500);
-            setWorkerRegistryTokens(data.workerRegistryTokens || 200);
-            setAvgToolSchemaTokens(data.avgToolSchemaTokens || 250);
+            setSupervisorSystemPromptTokens(toInteger(data.supervisorSystemPromptTokens, 500));
+            setWorkerRegistryTokens(toInteger(data.workerRegistryTokens, 200));
+            setAvgToolSchemaTokens(toInteger(data.avgToolSchemaTokens, 250));
             if (data.workers && data.workers.length > 0) {
               setWorkers(data.workers.map(w => ({
                 ID: w.ID,
                 name: w.name,
                 model_ID: w.model_ID,
-                toolCount: w.toolCount || 0,
+                toolCount: toInteger(w.toolCount, 0),
                 taskType: w.taskType || 'analysis',
-                avgObservationTokens: w.avgObservationTokens || 1000,
-                basePromptTokens: w.basePromptTokens || 400,
-                avgOutputTokensPerHop: w.avgOutputTokensPerHop || 300,
-                useCustomToolHops: Boolean(w.useCustomToolHops),
-                avgToolHops: w.avgToolHops || 2,
-                retryProbability: w.retryProbability || 0.10,
+                avgObservationTokens: toInteger(w.avgObservationTokens, 1000),
+                basePromptTokens: toInteger(w.basePromptTokens, 400),
+                avgOutputTokensPerHop: toInteger(w.avgOutputTokensPerHop, 300),
+                useCustomToolHops: toBoolean(w.useCustomToolHops),
+                avgToolHops: toNumber(w.avgToolHops, 2),
+                retryProbability: toNumber(w.retryProbability, 0.10),
                 executionMode: w.executionMode || 'sequential',
-                parallelInstances: w.parallelInstances || 1,
-                isReflectorNode: Boolean(w.isReflectorNode),
-                refinementIterations: w.refinementIterations || 1
+                parallelInstances: toInteger(w.parallelInstances, 1),
+                isReflectorNode: toBoolean(w.isReflectorNode),
+                refinementIterations: toInteger(w.refinementIterations, 1)
               })));
             }
           }
@@ -663,7 +679,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     }
 
     const billableOutput = outputTokens + thinkingTokens;
-    const weightedTokens = (inputTokens * inputRate) + (billableOutput * outputRate);
+    const weightedTokens = ((inputTokens * inputRate) + (billableOutput * outputRate)) / 1000;
     const cu = inputRate > 0 || outputRate > 0
       ? weightedTokens * capacityUnitsPerToken
       : ((inputTokens + billableOutput) / 1000) * capacityUnitsPerToken;
@@ -675,7 +691,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       inputTokens,
       outputTokens,
       thinkingTokens,
-      cu: cu.toLocaleString('en-US', { maximumFractionDigits: 1 }),
+      cu: cu.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 }),
       costEur: costEur > 0 ? `€${costEur.toFixed(4)}` : (costUsd > 0 ? `$${costUsd.toFixed(4)}` : '€0.0050'),
       formula
     };
@@ -1322,10 +1338,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
                     <Box>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        Bound Tools Count: <strong>{workers[selectedWorkerIndex].toolCount}</strong>
+                        Bound Tools Count: <strong>{toInteger(workers[selectedWorkerIndex].toolCount, 0)}</strong>
                       </Typography>
                       <Slider
-                        value={workers[selectedWorkerIndex].toolCount}
+                        value={toInteger(workers[selectedWorkerIndex].toolCount, 0)}
                         onChange={(_, val) => handleWorkerChange('toolCount', val)}
                         min={0}
                         max={20}
@@ -1393,10 +1409,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
                     <Box>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        Stochastic Retry Rate: <strong>{Math.round(workers[selectedWorkerIndex].retryProbability * 100)}%</strong>
+                        Stochastic Retry Rate: <strong>{Math.round(toNumber(workers[selectedWorkerIndex].retryProbability, 0.10) * 100)}%</strong>
                       </Typography>
                       <Slider
-                        value={workers[selectedWorkerIndex].retryProbability}
+                        value={toNumber(workers[selectedWorkerIndex].retryProbability, 0.10)}
                         onChange={(_, val) => handleWorkerChange('retryProbability', val)}
                         min={0}
                         max={0.80}
@@ -1683,10 +1699,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     {promptCachingEnabled && (
                       <Box sx={{ px: 1 }}>
                         <Typography variant="caption" color="text.secondary">
-                          Estimated Cache Hit Rate: {Math.round(estimatedCacheHitRate * 100)}%
+                          Estimated Cache Hit Rate: {Math.round(toNumber(estimatedCacheHitRate, 0.50) * 100)}%
                         </Typography>
                         <Slider
-                          value={estimatedCacheHitRate}
+                          value={toNumber(estimatedCacheHitRate, 0.50)}
                           onChange={(_, val) => setEstimatedCacheHitRate(val)}
                           min={0}
                           max={0.95}

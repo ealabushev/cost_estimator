@@ -28,6 +28,8 @@ const formatNumber = (value, digits = 0) => (Number.parseFloat(value) || 0).toLo
   maximumFractionDigits: digits
 });
 
+const formatCu = (value) => `${formatNumber(value, 4)} CU`;
+
 const scenarioAssumptionText = {
   optimistic: 'Optimistic applies fewer routing cycles, no retry uplift, and prompt-cache benefit where available.',
   median: 'Normal (Expected Median) uses the expected routing cycle count, default stochastic retry probability, and configured cache hit rate.',
@@ -127,7 +129,7 @@ export default function ExecutiveDashboard({ estimation, isMonteCarlo, onBack })
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>CU monthly cost:</span>
-              <strong className="tabular-nums" style={{ color: '#0f172a' }}>{cuMonthlyCost || 0} CU</strong>
+              <strong className="tabular-nums" style={{ color: '#0f172a' }}>{formatCu(cuMonthlyCost)}</strong>
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -271,9 +273,9 @@ export default function ExecutiveDashboard({ estimation, isMonteCarlo, onBack })
                       <TableCell sx={{ fontWeight: 800, color: '#312e81' }}>{formatNumber(volume)} runs</TableCell>
                       <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 800, color: '#312e81' }}>{formatNumber(totalInputTokensFromCycles * volume)}</TableCell>
                       <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 800, color: '#312e81' }}>{formatNumber(totalOutputTokensFromCycles * volume)}</TableCell>
-                      <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 800, color: '#312e81' }}>{formatNumber(totalInputCu * volume, 2)}</TableCell>
-                      <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 800, color: '#312e81' }}>{formatNumber(totalOutputCu * volume, 2)}</TableCell>
-                      <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 800, color: '#312e81' }}>{formatNumber(totalCuFromCycles * volume, 2)}</TableCell>
+                      <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 800, color: '#312e81' }}>{formatNumber(totalInputCu * volume, 4)}</TableCell>
+                      <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 800, color: '#312e81' }}>{formatNumber(totalOutputCu * volume, 4)}</TableCell>
+                      <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 800, color: '#312e81' }}>{formatNumber(totalCuFromCycles * volume, 4)}</TableCell>
                       <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 800, color: '#312e81' }}>{formatCurrency(capacityUnitCostEur, 4)}</TableCell>
                       <TableCell align="right" className="tabular-nums" sx={{ fontWeight: 900, color: '#312e81', fontSize: 15 }}>{formatCurrency(monthlyTco, 2)}</TableCell>
                     </TableRow>

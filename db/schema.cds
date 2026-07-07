@@ -236,8 +236,8 @@ entity ModelPricing : cuid, managed {
     effectiveDate               : Date not null;
     source                      : String(50);  // Display data source, e.g. 'GenAI Hub'
     // SAP Generative AI Hub specific fields
-    genAiTokenInputRate         : Decimal(10,6);  // API input cost from GenAI Hub Model Discovery
-    genAiTokenOutputRate        : Decimal(10,6);  // API output cost from GenAI Hub Model Discovery
+    genAiTokenInputRate         : Decimal(10,6);  // GenAI token conversion factor per 1,000 input tokens
+    genAiTokenOutputRate        : Decimal(10,6);  // GenAI token conversion factor per 1,000 output tokens
     capacityUnitRate            : Decimal(10,6);  // Deprecated: CU conversion now comes from global setting capacity_units_per_token
     btpCreditPerCapacityUnit    : Decimal(10,4);  // Deprecated: CU EUR cost now comes from global setting capacity_unit_cost_eur
 }

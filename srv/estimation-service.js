@@ -262,7 +262,7 @@ module.exports = cds.service.impl(async function() {
                 capacityUnitsPerToken,
                 capacityUnitCostEur,
                 currency: 'EUR',
-                formula: '(inputTokens * apiInputCost + outputTokens * apiOutputCost) * capacityUnitsPerToken * capacityUnitCostEur'
+                formula: '((inputTokens * apiInputCost + outputTokens * apiOutputCost) / 1000) * capacityUnitsPerToken * capacityUnitCostEur'
             }
         };
 
@@ -774,6 +774,11 @@ function inferCapabilities(resource) {
     return capabilities;
 }
 
+function calculateGenAiTokens(tokens, conversionRate) {
+    const parsedRate = Number.parseFloat(conversionRate);
+    return (tokens * (Number.isFinite(parsedRate) ? parsedRate : 0)) / 1000;
+}
+
 /**
  * Helper: Compute token accounting, EUR costs, and SAP AI Hub Capacity Units for a single routing cycle
  */
@@ -835,12 +840,12 @@ function computeCycleCostAndTokens(params) {
         }
     }
 
-    const supApiWeightedInputTokens = supInTokRaw * Number.parseFloat(supervisorPricing.genAiTokenInputRate || 0);
-    const supApiWeightedOutputTokens = supOutTok * Number.parseFloat(supervisorPricing.genAiTokenOutputRate || 0);
+    const supApiWeightedInputTokens = calculateGenAiTokens(supInTokRaw, supervisorPricing.genAiTokenInputRate);
+    const supApiWeightedOutputTokens = calculateGenAiTokens(supOutTok, supervisorPricing.genAiTokenOutputRate);
     const supApiWeightedTokens = supApiWeightedInputTokens + supApiWeightedOutputTokens;
     const workerBillableOutputTokens = workerCycleOutTok + workerCycleThinkTok;
-    const workerApiWeightedInputTokens = workerCycleInTok * Number.parseFloat(wp.pricing.genAiTokenInputRate || 0);
-    const workerApiWeightedOutputTokens = workerBillableOutputTokens * Number.parseFloat(wp.pricing.genAiTokenOutputRate || 0);
+    const workerApiWeightedInputTokens = calculateGenAiTokens(workerCycleInTok, wp.pricing.genAiTokenInputRate);
+    const workerApiWeightedOutputTokens = calculateGenAiTokens(workerBillableOutputTokens, wp.pricing.genAiTokenOutputRate);
     const workApiWeightedTokens = workerApiWeightedInputTokens + workerApiWeightedOutputTokens;
     const cycleGenAiTok = Math.round(supApiWeightedTokens + workApiWeightedTokens);
     const inputCapacityUnits = (supApiWeightedInputTokens + workerApiWeightedInputTokens) * Number.parseFloat(capacityUnitsPerToken || 1.90385);
