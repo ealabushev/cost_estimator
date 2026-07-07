@@ -5,6 +5,8 @@ node_modules/
 # Build outputs
 /app/dist/
 dist/
+/gen/
+/mta_archives/
 
 # OS files
 .DS_Store
@@ -32,3 +34,5 @@ logs/
 
 # added by cds
 .cdsrc-private.json
+mta_archives/
+mta_archives/costestimator_1.0.0.mtar
