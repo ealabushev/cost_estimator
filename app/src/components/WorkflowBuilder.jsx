@@ -31,7 +31,7 @@ import LayersIcon from '@mui/icons-material/Layers';
 import TuneIcon from '@mui/icons-material/Tune';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpOutlinedIcon from '@mui/icons-material/HelpOutlined';
 
 import ExecutiveDashboard from './ExecutiveDashboard';
 import { getProviderLabel, groupByProvider, sortByProviderAndModel } from '../utils/modelGrouping';
@@ -1208,7 +1208,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     title="Deterministic Baseline: Calculates happy-path monthly TCO using static averages (no retries, fixed hops, static cache rates). Best for rapid iteration and architecture comparison during workflow design."
                   >
                     <IconButton size="small" sx={{ color: 'text.secondary', p: 0.5 }}>
-                      <HelpOutlineIcon sx={{ fontSize: 16 }} />
+                      <HelpOutlinedIcon sx={{ fontSize: 16 }} />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -1239,7 +1239,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     title="Stochastic Risk Modeling: Runs 1,000 simulations injecting real-world variances (Poisson hops, retry loops, cache fluctuations) to predict P90 budget ceilings and P99 tail risk. Best for executive sign-off and stress-testing."
                   >
                     <IconButton size="small" sx={{ color: 'text.secondary', p: 0.5 }}>
-                      <HelpOutlineIcon sx={{ fontSize: 16 }} />
+                      <HelpOutlinedIcon sx={{ fontSize: 16 }} />
                     </IconButton>
                   </Tooltip>
                 </Box>
