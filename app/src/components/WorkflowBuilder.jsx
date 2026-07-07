@@ -4,6 +4,7 @@ import {
   Background,
   Controls,
   MiniMap,
+  Panel,
   useNodesState,
   useEdgesState,
   MarkerType,
@@ -193,18 +194,29 @@ function CustomNode({ data }) {
               <span>Hops & Tools:</span> 
               <span style={{ fontWeight: 600 }}>{data.hops} hops | {data.tools} tools</span>
             </Typography>
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px', fontWeight: 600 }}>
-                Live Token Burn Meter ({data.burnRatio}%):
-              </Typography>
-              <div className="burn-meter">
-                <div 
-                  className={`burn-meter-fill ${data.burnClass}`} 
-                  style={{ width: `${data.burnRatio}%` }}
-                />
-              </div>
-            </Box>
           </>
+        )}
+        {data.showTokenOverlay && data.telemetry && (
+          <Box className="token-telemetry-box" title={`Formula: ${data.telemetry.formula}`}>
+            <Box className="telemetry-row">
+              <span className="telemetry-label">🪙 Input / Out:</span>
+              <span className="telemetry-value">{data.telemetry.inputTokens.toLocaleString()} / {data.telemetry.outputTokens.toLocaleString()}</span>
+            </Box>
+            {data.telemetry.thinkingTokens > 0 && (
+              <Box className="telemetry-row">
+                <span className="telemetry-label">🧠 Thinking:</span>
+                <span className="telemetry-value telemetry-highlight">{data.telemetry.thinkingTokens.toLocaleString()} tok</span>
+              </Box>
+            )}
+            <Box className="telemetry-row">
+              <span className="telemetry-label">⚡ AI Hub CU:</span>
+              <span className="telemetry-value">{data.telemetry.cu}</span>
+            </Box>
+            <Box className="telemetry-row">
+              <span className="telemetry-label">💶 Est. Cost:</span>
+              <span className="telemetry-value telemetry-cost">{data.telemetry.costEur}</span>
+            </Box>
+          </Box>
         )}
       </Box>
       {/* Handles for connections */}
@@ -260,10 +272,13 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   const [notes, setNotes] = useState('Created via builder');
   const [capacityUnitsPerToken, setCapacityUnitsPerToken] = useState(1.90385);
   const [capacityUnitCostEur, setCapacityUnitCostEur] = useState(1.04);
+  const [supervisorSystemPromptTokens, setSupervisorSystemPromptTokens] = useState(500);
+  const [workerRegistryTokens, setWorkerRegistryTokens] = useState(200);
+  const [avgToolSchemaTokens, setAvgToolSchemaTokens] = useState(250);
 
   // List of Workers config
   const [workers, setWorkers] = useState([
-    { ID: '1', name: 'Worker Agent 1', model_ID: '', toolCount: 3, taskType: 'analysis', avgObservationTokens: 1000, retryProbability: 0.10, executionMode: 'sequential', parallelInstances: 1, isReflectorNode: false, refinementIterations: 1 }
+    { ID: '1', name: 'Worker Agent 1', model_ID: '', toolCount: 3, taskType: 'analysis', avgObservationTokens: 1000, basePromptTokens: 400, avgOutputTokensPerHop: 300, useCustomToolHops: false, avgToolHops: 2, retryProbability: 0.10, executionMode: 'sequential', parallelInstances: 1, isReflectorNode: false, refinementIterations: 1 }
   ]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -281,6 +296,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   const [estimationResult, setEstimationResult] = useState(null);
   const [monteCarloMode, setMonteCarloMode] = useState(false);
 
+  // Token Telemetry and Pricing State
+  const [modelPricing, setModelPricing] = useState([]);
+  const [showTokenOverlay, setShowTokenOverlay] = useState(true);
+
   // Error notifications
   const [errorMsg, setErrorMsg] = useState(null);
 
@@ -288,6 +307,49 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   useEffect(() => {
     if (workflowId || initialEstimation) {
       setIsTemplateSelected(true);
+    }
+    if (workflowId) {
+      fetch(`/api/v1/estimation/WorkflowConfigs(${workflowId})?$expand=workers`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error && data.ID) {
+            setName(data.name || 'Loaded Workflow');
+            setProject(data.project || '');
+            setExecutionMode(data.orchestrationPattern || 'sequential');
+            setStateMode(data.stateMode || 'scoped_subgraph');
+            setComplexityProfile(data.complexityProfile || 'standard');
+            setExpectedRoutingCycles(data.expectedRoutingCycles || 4);
+            setUseCustomRoutingCycles(Boolean(data.useCustomRoutingCycles));
+            setMonthlyRunVolume(data.monthlyRunVolume || 10000);
+            setPromptCachingEnabled(data.promptCachingEnabled ?? true);
+            setEstimatedCacheHitRate(data.estimatedCacheHitRate || 0.50);
+            setSupervisorModelId(data.supervisorModel_ID || '');
+            if (data.synthesizerModel_ID) setSynthesizerModelId(data.synthesizerModel_ID);
+            setSupervisorSystemPromptTokens(data.supervisorSystemPromptTokens || 500);
+            setWorkerRegistryTokens(data.workerRegistryTokens || 200);
+            setAvgToolSchemaTokens(data.avgToolSchemaTokens || 250);
+            if (data.workers && data.workers.length > 0) {
+              setWorkers(data.workers.map(w => ({
+                ID: w.ID,
+                name: w.name,
+                model_ID: w.model_ID,
+                toolCount: w.toolCount || 0,
+                taskType: w.taskType || 'analysis',
+                avgObservationTokens: w.avgObservationTokens || 1000,
+                basePromptTokens: w.basePromptTokens || 400,
+                avgOutputTokensPerHop: w.avgOutputTokensPerHop || 300,
+                useCustomToolHops: Boolean(w.useCustomToolHops),
+                avgToolHops: w.avgToolHops || 2,
+                retryProbability: w.retryProbability || 0.10,
+                executionMode: w.executionMode || 'sequential',
+                parallelInstances: w.parallelInstances || 1,
+                isReflectorNode: Boolean(w.isReflectorNode),
+                refinementIterations: w.refinementIterations || 1
+              })));
+            }
+          }
+        })
+        .catch(err => console.error("Error loading workflow config:", err));
     }
   }, [workflowId, initialEstimation]);
 
@@ -329,6 +391,18 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       })
       .catch(err => {
         console.error("Failed to load GenAI Hub pricing defaults:", err);
+      });
+  }, []);
+
+  // Load ModelPricing for live token/CU/cost telemetry overlay
+  useEffect(() => {
+    fetch('/api/v1/estimation/ModelPricing')
+      .then(res => res.json())
+      .then(data => {
+        setModelPricing(data.value || []);
+      })
+      .catch(err => {
+        console.error("Failed to load model pricing:", err);
       });
   }, []);
 
@@ -440,6 +514,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           toolCount: w.toolCount,
           taskType: w.taskType,
           avgObservationTokens: w.avgObservationTokens || 1000,
+          basePromptTokens: w.basePromptTokens || 400,
+          avgOutputTokensPerHop: w.avgOutputTokensPerHop || 300,
+          useCustomToolHops: w.useCustomToolHops || false,
+          avgToolHops: w.avgToolHops || 2,
           retryProbability: w.retryProbability || 0.10,
           executionMode: w.executionMode || 'sequential',
           parallelInstances: w.parallelInstances || 1,
@@ -462,6 +540,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       toolCount: 3,
       taskType: 'analysis',
       avgObservationTokens: 1000,
+      basePromptTokens: 400,
+      avgOutputTokensPerHop: 300,
+      useCustomToolHops: false,
+      avgToolHops: 2,
       retryProbability: 0.10,
       executionMode: 'sequential',
       parallelInstances: 1,
@@ -517,6 +599,9 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
   // Derive worker hops L based on Task Type & toolCount
   const getDerivedHops = useCallback((w) => {
+    if (w.useCustomToolHops && w.avgToolHops) {
+      return Math.max(1, Math.round(Number(w.avgToolHops) || 1));
+    }
     let baseL = 3;
     if (w.taskType === 'simple_lookup') baseL = 1;
     else if (w.taskType === 'retrieval_response') baseL = 2;
@@ -529,21 +614,72 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     return Math.max(1, Math.round(derived));
   }, []);
 
-  // Compute burn class and ratio for UI visualizations
-  const getBurnMetrics = useCallback((w) => {
-    const hops = getDerivedHops(w);
-    const obs = w.avgObservationTokens;
-    const tokens = hops * obs;
-    // Normalized ratio based on maximum expected tokens (e.g. 10000)
-    const ratio = Math.min(100, Math.round((tokens / 12000) * 100));
+  // Compute real-time token, CU, and cost telemetry for nodes and edges
+  const getNodeTelemetry = useCallback((nodeType, modelId, workerConfig = null) => {
+    const model = models.find(m => m.ID === modelId) || {};
+    const pricing = modelPricing.find(p => p.provider === model.provider && p.modelName === model.modelName) || {};
+    
+    const inputRate = Number.parseFloat(pricing.genAiTokenInputRate || 0);
+    const outputRate = Number.parseFloat(pricing.genAiTokenOutputRate || 0);
+    const inputPrice = Number.parseFloat(pricing.inputPricePerMtok || model.customPriceInputPerMtok || 0);
+    const outputPrice = Number.parseFloat(pricing.outputPricePerMtok || model.customPriceOutputPerMtok || 0);
+    const thinkingPrice = Number.parseFloat(pricing.thinkingPricePerMtok || outputPrice || 0);
+    const thinkingMult = Number.parseFloat(model.thinkingTokenMultiplier || 0);
 
-    let burnClass = 'burn-low';
-    if (ratio > 80) burnClass = 'burn-bloat';
-    else if (ratio > 50) burnClass = 'burn-high';
-    else if (ratio > 20) burnClass = 'burn-medium';
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let thinkingTokens = 0;
+    let formula = '';
 
-    return { ratio, burnClass };
-  }, [getDerivedHops]);
+    if (nodeType === 'supervisor') {
+      const sysTok = Number(supervisorSystemPromptTokens) || 500;
+      const regTok = Number(workerRegistryTokens) || 200;
+      inputTokens = sysTok + regTok + 500;
+      outputTokens = 150;
+      formula = `System Prompt (${sysTok}) + Worker Registry (${regTok}) + Est. History (500)`;
+    } else if (nodeType === 'synthesizer') {
+      inputTokens = 1500;
+      outputTokens = 500;
+      thinkingTokens = Math.round(outputTokens * thinkingMult);
+      formula = 'Aggregated Worker Outputs (1500) → Final Synthesis (500)';
+    } else if (nodeType === 'worker' && workerConfig) {
+      const hops = getDerivedHops(workerConfig);
+      const toolCount = workerConfig.toolCount || 0;
+      const obsTokens = workerConfig.avgObservationTokens || 1000;
+      const basePrompt = workerConfig.basePromptTokens !== undefined && workerConfig.basePromptTokens !== null ? Number(workerConfig.basePromptTokens) : 400;
+      const hopOutTok = workerConfig.avgOutputTokensPerHop !== undefined && workerConfig.avgOutputTokensPerHop !== null ? Number(workerConfig.avgOutputTokensPerHop) : 300;
+      const schemaTok = Number(avgToolSchemaTokens) || 250;
+      
+      let totalInput = 0;
+      let hist = 0;
+      for (let h = 1; h <= hops; h++) {
+        totalInput += basePrompt + (toolCount * schemaTok) + hist + ((h - 1) * obsTokens);
+        hist += Math.round((hopOutTok + obsTokens) * 0.7);
+      }
+      inputTokens = Math.round(totalInput);
+      outputTokens = Math.round(hopOutTok * hops);
+      thinkingTokens = Math.round(outputTokens * thinkingMult);
+      formula = `Base (${basePrompt}) + ${toolCount} Tools × ${schemaTok} + Obs (${obsTokens}) across ${hops} hops`;
+    }
+
+    const billableOutput = outputTokens + thinkingTokens;
+    const weightedTokens = (inputTokens * inputRate) + (billableOutput * outputRate);
+    const cu = inputRate > 0 || outputRate > 0
+      ? weightedTokens * capacityUnitsPerToken
+      : ((inputTokens + billableOutput) / 1000) * capacityUnitsPerToken;
+      
+    const costEur = cu * capacityUnitCostEur;
+    const costUsd = ((inputTokens / 1e6) * inputPrice) + ((outputTokens / 1e6) * outputPrice) + ((thinkingTokens / 1e6) * thinkingPrice);
+
+    return {
+      inputTokens,
+      outputTokens,
+      thinkingTokens,
+      cu: cu.toLocaleString('en-US', { maximumFractionDigits: 1 }),
+      costEur: costEur > 0 ? `€${costEur.toFixed(4)}` : (costUsd > 0 ? `$${costUsd.toFixed(4)}` : '€0.0050'),
+      formula
+    };
+  }, [models, modelPricing, capacityUnitsPerToken, capacityUnitCostEur, getDerivedHops, supervisorSystemPromptTokens, workerRegistryTokens, avgToolSchemaTokens]);
 
   const getModelName = useCallback((id) => {
     const m = models.find(x => x.ID === id);
@@ -564,6 +700,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     const supId = 'supervisor';
     const supModel = getModelName(supervisorModelId);
     const supProv = getModelProvider(supervisorModelId);
+    const supTelemetry = getNodeTelemetry('supervisor', supervisorModelId);
     
     newNodes.push({
       id: supId,
@@ -572,7 +709,9 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         label: name,
         isSupervisor: true,
         modelName: supModel,
-        provider: supProv
+        provider: supProv,
+        showTokenOverlay,
+        telemetry: supTelemetry
       },
       position: { x: 300, y: 50 } // Default
     });
@@ -583,10 +722,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     let currentY = 220;
 
     workers.forEach((w, index) => {
-      const metrics = getBurnMetrics(w);
       const hops = getDerivedHops(w);
       const mName = getModelName(w.model_ID);
       const mProv = getModelProvider(w.model_ID);
+      const workerTelemetry = getNodeTelemetry('worker', w.model_ID, w);
 
       const defaultX = executionMode === 'parallel_map_reduce' 
         ? workerNodeX + (index * xGap) 
@@ -604,10 +743,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           taskType: w.taskType.replace('_', ' '),
           hops,
           tools: w.toolCount,
-          burnRatio: metrics.ratio,
-          burnClass: metrics.burnClass,
           modelName: mName,
           provider: mProv,
+          showTokenOverlay,
+          telemetry: workerTelemetry,
           onDeleteClick: (e) => {
             e.stopPropagation();
             handleDeleteWorker(index);
@@ -625,6 +764,11 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         targetHandle: 't',
         className: stateMode === 'scoped_subgraph' ? 'edge-scoped' : 'edge-global',
         animated: true,
+        label: showTokenOverlay ? `↗ ~${workerTelemetry.inputTokens.toLocaleString()} tok` : undefined,
+        labelStyle: { fill: '#333', fontWeight: 700, fontSize: 10 },
+        labelBgStyle: { fill: 'rgba(255, 255, 255, 0.9)', fillOpacity: 0.9, stroke: '#e2e8f0' },
+        labelBgPadding: [6, 4],
+        labelBgBorderRadius: 4,
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: stateMode === 'scoped_subgraph' ? '#4f46e5' : '#ef4444',
@@ -645,6 +789,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       const synthId = 'synthesizer';
       const synthModel = getModelName(synthesizerModelId);
       const synthProv = getModelProvider(synthesizerModelId);
+      const synthTelemetry = getNodeTelemetry('synthesizer', synthesizerModelId);
       
       const defaultSynthX = workerNodeX + ((workers.length - 1) * xGap) / 2;
       const defaultSynthY = 380;
@@ -657,6 +802,8 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           isSynthesizer: true,
           modelName: synthModel,
           provider: synthProv,
+          showTokenOverlay,
+          telemetry: synthTelemetry
         },
         position: { x: defaultSynthX, y: defaultSynthY }
       });
@@ -671,6 +818,11 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           targetHandle: 't',
           className: stateMode === 'scoped_subgraph' ? 'edge-scoped' : 'edge-global',
           animated: true,
+          label: showTokenOverlay ? `↘ ~500 tok` : undefined,
+          labelStyle: { fill: '#333', fontWeight: 700, fontSize: 10 },
+          labelBgStyle: { fill: 'rgba(255, 255, 255, 0.9)', fillOpacity: 0.9, stroke: '#e2e8f0' },
+          labelBgPadding: [6, 4],
+          labelBgBorderRadius: 4,
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: stateMode === 'scoped_subgraph' ? '#4f46e5' : '#ef4444',
@@ -691,12 +843,12 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     });
 
     setEdges(newEdges);
-  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, getBurnMetrics, getDerivedHops, getModelName, getModelProvider, setNodes, setEdges, handleDeleteWorker]);
+  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, showTokenOverlay, getNodeTelemetry, getDerivedHops, getModelName, getModelProvider, setNodes, setEdges, handleDeleteWorker]);
 
   // Synchronize layout when parameters change
   useEffect(() => {
     recalculateLayout(false);
-  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, recalculateLayout]);
+  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, showTokenOverlay, modelPricing, recalculateLayout]);
 
 
   // Deep save the workflow config and invoke estimation
@@ -723,6 +875,9 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         notes,
         supervisorModel_ID: supervisorModelId,
         synthesizerModel_ID: executionMode === 'parallel_map_reduce' ? synthesizerModelId : null,
+        supervisorSystemPromptTokens: parseInt(supervisorSystemPromptTokens) || 500,
+        workerRegistryTokens: parseInt(workerRegistryTokens) || 200,
+        avgToolSchemaTokens: parseInt(avgToolSchemaTokens) || 250,
       };
 
       let workflowDbId = workflowId;
@@ -766,13 +921,15 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           toolCount: parseInt(w.toolCount),
           taskType: w.taskType,
           avgToolHops: parseFloat(getDerivedHops(w)),
-          avgObservationTokens: parseInt(w.avgObservationTokens),
+          avgObservationTokens: parseInt(w.avgObservationTokens) || 1000,
+          basePromptTokens: parseInt(w.basePromptTokens) || 400,
+          avgOutputTokensPerHop: parseInt(w.avgOutputTokensPerHop) || 300,
           retryProbability: parseFloat(w.retryProbability),
           executionMode: w.executionMode,
           parallelInstances: parseInt(w.parallelInstances || 1),
           isReflectorNode: w.isReflectorNode,
           refinementIterations: parseInt(w.refinementIterations || 1),
-          useCustomToolHops: false
+          useCustomToolHops: Boolean(w.useCustomToolHops)
         };
 
         const wCreateRes = await fetch('/api/v1/estimation/WorkerConfigs', {
@@ -1172,20 +1329,62 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                       />
                     </Box>
 
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        Derived Hops per Cycle: <strong>{getDerivedHops(workers[selectedWorkerIndex])}</strong> hops.
+                    <Divider sx={{ my: 0.5 }}>
+                      <Chip label="Advanced Token & Hops Overrides" size="small" sx={{ fontSize: '10px', fontWeight: 600 }} />
+                    </Divider>
+
+                    <FormControlLabel
+                      control={
+                        <Switch 
+                          checked={workers[selectedWorkerIndex].useCustomToolHops || false} 
+                          onChange={(e) => handleWorkerChange('useCustomToolHops', e.target.checked)} 
+                          size="small"
+                        />
+                      }
+                      label={<Typography variant="body2" sx={{ fontSize: '13px' }}>Override Derived Hops</Typography>}
+                    />
+
+                    {workers[selectedWorkerIndex].useCustomToolHops ? (
+                      <TextField 
+                        label="Manual Hops per Cycle" 
+                        type="number"
+                        value={workers[selectedWorkerIndex].avgToolHops || getDerivedHops(workers[selectedWorkerIndex])} 
+                        onChange={(e) => handleWorkerChange('avgToolHops', parseFloat(e.target.value) || 1)}
+                        fullWidth size="small"
+                      />
+                    ) : (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -1, mb: 0.5 }}>
+                        Auto-derived hops: <strong>{getDerivedHops(workers[selectedWorkerIndex])}</strong> hops.
                       </Typography>
-                    </Box>
+                    )}
 
                     <TextField 
-                      label="Observation Payload Density (Tokens)" 
+                      label="Base Prompt Tokens" 
                       type="number"
-                      value={workers[selectedWorkerIndex].avgObservationTokens} 
+                      value={workers[selectedWorkerIndex].basePromptTokens !== undefined && workers[selectedWorkerIndex].basePromptTokens !== null ? workers[selectedWorkerIndex].basePromptTokens : 400} 
+                      onChange={(e) => handleWorkerChange('basePromptTokens', parseInt(e.target.value) || 0)}
+                      fullWidth size="small"
+                      helperText="Default: 400 tokens"
+                    />
+
+                    <TextField 
+                      label="Output Tokens per Hop" 
+                      type="number"
+                      value={workers[selectedWorkerIndex].avgOutputTokensPerHop !== undefined && workers[selectedWorkerIndex].avgOutputTokensPerHop !== null ? workers[selectedWorkerIndex].avgOutputTokensPerHop : 300} 
+                      onChange={(e) => handleWorkerChange('avgOutputTokensPerHop', parseInt(e.target.value) || 0)}
+                      fullWidth size="small"
+                      helperText="Default: 300 tokens"
+                    />
+
+                    <TextField 
+                      label="Observation Density (Tokens)" 
+                      type="number"
+                      value={workers[selectedWorkerIndex].avgObservationTokens || 1000} 
                       onChange={(e) => handleWorkerChange('avgObservationTokens', parseInt(e.target.value) || 0)}
                       fullWidth size="small"
                       helperText="Low: ~200, Medium: ~1000 (OData response), High: ~3000 (nested tables)"
                     />
+                    <Divider sx={{ my: 0.5 }} />
 
                     <Box>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
@@ -1268,6 +1467,22 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                   <Controls />
                   <MiniMap />
                   <Background variant="dots" gap={12} size={1} />
+                  <Panel position="top-right">
+                    <Card sx={{ p: 1, px: 1.5, boxShadow: 2, bgcolor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', borderRadius: 2 }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            size="small"
+                            checked={showTokenOverlay}
+                            onChange={(e) => setShowTokenOverlay(e.target.checked)}
+                            color="primary"
+                          />
+                        }
+                        label={<Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>Live Token Telemetry</Typography>}
+                        sx={{ m: 0 }}
+                      />
+                    </Card>
+                  </Panel>
                 </ReactFlow>
               </Box>
 
@@ -1394,6 +1609,30 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                       </FormControl>
                     )}
 
+                    <Divider sx={{ my: 0.5 }}>
+                      <Chip label="Prompt & Tool Overhead" size="small" sx={{ fontSize: '10px', fontWeight: 600 }} />
+                    </Divider>
+                    <TextField 
+                      label="Supervisor System Prompt (Tokens)" 
+                      type="number" 
+                      value={supervisorSystemPromptTokens} 
+                      onChange={(e) => setSupervisorSystemPromptTokens(parseInt(e.target.value) || 0)} 
+                      fullWidth size="small" 
+                    />
+                    <TextField 
+                      label="Worker Registry Size (Tokens)" 
+                      type="number" 
+                      value={workerRegistryTokens} 
+                      onChange={(e) => setWorkerRegistryTokens(parseInt(e.target.value) || 0)} 
+                      fullWidth size="small" 
+                    />
+                    <TextField 
+                      label="Avg Tool Schema Size (Tokens/Tool)" 
+                      type="number" 
+                      value={avgToolSchemaTokens} 
+                      onChange={(e) => setAvgToolSchemaTokens(parseInt(e.target.value) || 0)} 
+                      fullWidth size="small" 
+                    />
                     <Divider sx={{ my: 1 }} />
 
                     <TextField 

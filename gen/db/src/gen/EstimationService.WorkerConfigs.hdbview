@@ -8,6 +8,8 @@ VIEW EstimationService_WorkerConfigs AS SELECT
   WorkerConfigs_0.taskType,
   WorkerConfigs_0.avgToolHops,
   WorkerConfigs_0.avgObservationTokens,
+  WorkerConfigs_0.basePromptTokens,
+  WorkerConfigs_0.avgOutputTokensPerHop,
   WorkerConfigs_0.retryProbability,
   WorkerConfigs_0.invocationProbability,
   WorkerConfigs_0.maxRetriesPerCycle,

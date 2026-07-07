@@ -86,6 +86,8 @@ entity WorkerConfigs : cuid {
     taskType                : WorkerTaskType default 'analysis';  // Intuitive selector → derives avgToolHops
     avgToolHops             : Decimal(4,1);           // Auto-derived from taskType + toolCount; user can override.
     avgObservationTokens    : Integer default 200;    // Average tokens per tool observation
+    basePromptTokens        : Integer default 400;    // Base prompt tokens override (default 400)
+    avgOutputTokensPerHop   : Integer default 300;    // Average output tokens per hop override (default 300)
     retryProbability        : Decimal(3,2) default 0.10 @assert.range: [0.00, 1.00]; // Per-invocation error retry probability
     invocationProbability   : Decimal(3,2) default 1.00 @assert.range: [0.00, 1.00]; // For dynamic worker selection weighting
     maxRetriesPerCycle      : Integer default 5;      // Cap on retry attempts per cycle

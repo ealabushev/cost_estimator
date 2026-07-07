@@ -8,6 +8,8 @@ COLUMN TABLE costestimator_WorkerConfigs (
   taskType NVARCHAR(5000) DEFAULT 'analysis',
   avgToolHops DECIMAL(4, 1),
   avgObservationTokens INTEGER DEFAULT 200,
+  basePromptTokens INTEGER DEFAULT 400,
+  avgOutputTokensPerHop INTEGER DEFAULT 300,
   retryProbability DECIMAL(3, 2) DEFAULT 0.1,
   invocationProbability DECIMAL(3, 2) DEFAULT 1.0,
   maxRetriesPerCycle INTEGER DEFAULT 5,

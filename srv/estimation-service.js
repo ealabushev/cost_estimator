@@ -807,14 +807,15 @@ function computeCycleCostAndTokens(params) {
     let workerCycleCostUsd = 0;
     let currentHistory = accumulatedHistoryTokens;
 
+    const basePrompt = worker.basePromptTokens !== undefined && worker.basePromptTokens !== null ? Number(worker.basePromptTokens) : 400;
     const toolSchemaTok = (worker.toolCount || 0) * (workflow.avgToolSchemaTokens || 250);
     const obsTok = worker.avgObservationTokens || 1000;
 
     for (let hop = 1; hop <= L; hop++) {
-        const hopInTokRaw = 400 + toolSchemaTok + currentHistory + ((hop - 1) * obsTok);
+        const hopInTokRaw = basePrompt + toolSchemaTok + currentHistory + ((hop - 1) * obsTok);
         const hopCacheHitTok = Math.round(hopInTokRaw * cacheHitRate);
         const hopBillableInTok = hopInTokRaw - hopCacheHitTok;
-        const hopOutTok = 300;
+        const hopOutTok = worker.avgOutputTokensPerHop !== undefined && worker.avgOutputTokensPerHop !== null ? Number(worker.avgOutputTokensPerHop) : 300;
         const thinkingMult = Number.parseFloat(wp.config ? wp.config.thinkingTokenMultiplier : 0) || 0;
         const hopThinkTok = Math.round(hopOutTok * thinkingMult);
 
