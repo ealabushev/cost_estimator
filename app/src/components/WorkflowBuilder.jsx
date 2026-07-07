@@ -18,7 +18,7 @@ import {
   Box, Grid, Card, CardContent, Typography, Button, TextField, Select,
   MenuItem, FormControl, InputLabel, FormControlLabel, Switch, Drawer,
   IconButton, Divider, Slider, Chip, Alert, CircularProgress, RadioGroup, Radio,
-  ListSubheader
+  ListSubheader, Tooltip
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -31,6 +31,7 @@ import LayersIcon from '@mui/icons-material/Layers';
 import TuneIcon from '@mui/icons-material/Tune';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 import ExecutiveDashboard from './ExecutiveDashboard';
 import { getProviderLabel, groupByProvider, sortByProviderAndModel } from '../utils/modelGrouping';
@@ -164,10 +165,14 @@ function CustomNode({ data }) {
   const isSynthesizer = data.isSynthesizer;
 
   return (
-    <Box className="custom-node" sx={{
-      borderLeft: 6,
-      borderColor: isSupervisor ? 'primary.main' : isSynthesizer ? 'secondary.main' : 'success.main'
-    }}>
+    <Box 
+      className="custom-node" 
+      title={data.showTokenOverlay && data.telemetry ? `Formula: ${data.telemetry.formula}` : undefined}
+      sx={{
+        borderLeft: 6,
+        borderColor: isSupervisor ? 'primary.main' : isSynthesizer ? 'secondary.main' : 'success.main'
+      }}
+    >
       <Box className="custom-node-header" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="body2" sx={{ fontWeight: 700, pr: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 110 }}>
           {data.label}
@@ -380,10 +385,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           // Set initial defaults
           const gpt4o = list.find(m => m.modelName === 'gpt-4o');
           const mini = list.find(m => m.modelName === 'gpt-4o-mini');
-          setSupervisorModelId(gpt4o ? gpt4o.ID : list[0].ID);
-          setSynthesizerModelId(mini ? mini.ID : list[0].ID);
-          // Set initial models for workers
-          setWorkers(prev => prev.map(w => ({ ...w, model_ID: mini ? mini.ID : list[0].ID })));
+          setSupervisorModelId(prev => prev || (gpt4o ? gpt4o.ID : list[0].ID));
+          setSynthesizerModelId(prev => prev || (mini ? mini.ID : list[0].ID));
+          // Set initial models for workers only if not already assigned
+          setWorkers(prev => prev.map(w => ({ ...w, model_ID: w.model_ID || (mini ? mini.ID : list[0].ID) })));
         }
         setLoadingModels(false);
       })
@@ -864,12 +869,12 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     });
 
     setEdges(newEdges);
-  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, showTokenOverlay, getNodeTelemetry, getDerivedHops, getModelName, getModelProvider, setNodes, setEdges, handleDeleteWorker]);
+  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, showTokenOverlay, supervisorSystemPromptTokens, workerRegistryTokens, avgToolSchemaTokens, getNodeTelemetry, getDerivedHops, getModelName, getModelProvider, setNodes, setEdges, handleDeleteWorker]);
 
   // Synchronize layout when parameters change
   useEffect(() => {
     recalculateLayout(false);
-  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, showTokenOverlay, modelPricing, recalculateLayout]);
+  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, showTokenOverlay, modelPricing, supervisorSystemPromptTokens, workerRegistryTokens, avgToolSchemaTokens, recalculateLayout]);
 
 
   // Deep save the workflow config and invoke estimation
@@ -1176,29 +1181,68 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
               </Box>
 
               {/* Right: Actions */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button 
-                  size="small"
-                  variant="contained" 
-                  color="primary" 
-                  startIcon={estimating && !monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
-                  disabled={estimating || workers.length === 0}
-                  onClick={() => handleRunEstimation(false)}
-                  sx={{ fontWeight: 700 }}
-                >
-                  {estimating && !monteCarloMode ? 'Calculating...' : 'Quick Estimate'}
-                </Button>
-                <Button 
-                  size="small"
-                  variant="outlined" 
-                  color="primary" 
-                  startIcon={estimating && monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <BarChartIcon />}
-                  disabled={estimating || workers.length === 0}
-                  onClick={() => handleRunEstimation(true)}
-                  sx={{ fontWeight: 700 }}
-                >
-                  {estimating && monteCarloMode ? 'Simulating...' : 'Risk Simulation'}
-                </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Tooltip 
+                    arrow 
+                    placement="bottom" 
+                    title="Deterministic Baseline: Calculates happy-path monthly TCO using static averages (no retries, fixed hops, static cache rates). Best for rapid iteration and architecture comparison during workflow design."
+                  >
+                    <span style={{ display: 'inline-block' }}>
+                      <Button 
+                        size="small"
+                        variant="contained" 
+                        color="primary" 
+                        startIcon={estimating && !monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+                        disabled={estimating || workers.length === 0}
+                        onClick={() => handleRunEstimation(false)}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        {estimating && !monteCarloMode ? 'Calculating...' : 'Quick Estimate'}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  <Tooltip 
+                    arrow 
+                    placement="bottom" 
+                    title="Deterministic Baseline: Calculates happy-path monthly TCO using static averages (no retries, fixed hops, static cache rates). Best for rapid iteration and architecture comparison during workflow design."
+                  >
+                    <IconButton size="small" sx={{ color: 'text.secondary', p: 0.5 }}>
+                      <HelpOutlineIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Tooltip 
+                    arrow 
+                    placement="bottom" 
+                    title="Stochastic Risk Modeling: Runs 1,000 simulations injecting real-world variances (Poisson hops, retry loops, cache fluctuations) to predict P90 budget ceilings and P99 tail risk. Best for executive sign-off and stress-testing."
+                  >
+                    <span style={{ display: 'inline-block' }}>
+                      <Button 
+                        size="small"
+                        variant="outlined" 
+                        color="primary" 
+                        startIcon={estimating && monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <BarChartIcon />}
+                        disabled={estimating || workers.length === 0}
+                        onClick={() => handleRunEstimation(true)}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        {estimating && monteCarloMode ? 'Simulating...' : 'Risk Simulation'}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  <Tooltip 
+                    arrow 
+                    placement="bottom" 
+                    title="Stochastic Risk Modeling: Runs 1,000 simulations injecting real-world variances (Poisson hops, retry loops, cache fluctuations) to predict P90 budget ceilings and P99 tail risk. Best for executive sign-off and stress-testing."
+                  >
+                    <IconButton size="small" sx={{ color: 'text.secondary', p: 0.5 }}>
+                      <HelpOutlineIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               </Box>
             </Box>
 
