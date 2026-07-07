@@ -85,6 +85,7 @@ body {
   box-shadow: var(--shadow-sm);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 220px;
+  width: 270px;
   font-size: 13px;
   position: relative;
 }
@@ -120,18 +121,44 @@ body {
   }
 }
 
-.edge-scoped {
+.edge-scoped .react-flow__edge-path,
+.edge-scoped.react-flow__edge-path {
   stroke: var(--accent-primary);
   stroke-width: 2;
   stroke-dasharray: 5, 5;
   animation: flow-dash 1s linear infinite;
 }
 
-.edge-global {
+.edge-global .react-flow__edge-path,
+.edge-global.react-flow__edge-path {
   stroke: var(--status-error);
   stroke-width: 3;
   stroke-dasharray: 8, 4;
   animation: flow-dash 1.5s linear infinite;
+}
+
+/* Ensure ReactFlow Edge telemetry labels and text boxes do not inherit edge path animations or dashed strokes */
+.react-flow__edge-textwrapper,
+.react-flow__edge-textbg,
+.react-flow__edge-text {
+  stroke: none !important;
+  stroke-dasharray: none !important;
+  animation: none !important;
+}
+
+.react-flow__edge-text {
+  fill: var(--text-primary) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  font-family: var(--font-sans) !important;
+}
+
+.react-flow__edge-textbg {
+  fill: rgba(255, 255, 255, 0.95) !important;
+  stroke: var(--border-color) !important;
+  stroke-width: 1px !important;
+  rx: 6px !important;
+  ry: 6px !important;
 }
 
 /* Token Telemetry Overlay */

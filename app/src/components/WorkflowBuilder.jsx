@@ -696,6 +696,15 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     const newNodes = [];
     const newEdges = [];
 
+    // Calculate horizontal layout parameters for all workers
+    const workerNodeX = 80;
+    const xGap = 340; // 340px ensures generous spacing without overlap for 270px wide nodes
+    const workerNodeY = 240;
+    const totalWorkers = workers.length;
+
+    // Center Supervisor above the horizontal line of workers
+    const centerX = totalWorkers > 0 ? workerNodeX + ((totalWorkers - 1) * xGap) / 2 : 300;
+
     // 1. Supervisor
     const supId = 'supervisor';
     const supModel = getModelName(supervisorModelId);
@@ -713,27 +722,18 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         showTokenOverlay,
         telemetry: supTelemetry
       },
-      position: { x: 300, y: 50 } // Default
+      position: { x: centerX, y: 50 } // Centered above workers
     });
 
-    // 2. Workers
-    const workerNodeX = executionMode === 'parallel_map_reduce' ? 80 : 300;
-    const xGap = 220;
-    let currentY = 220;
-
+    // 2. Workers - Placed horizontally on one line without overlap
     workers.forEach((w, index) => {
       const hops = getDerivedHops(w);
       const mName = getModelName(w.model_ID);
       const mProv = getModelProvider(w.model_ID);
       const workerTelemetry = getNodeTelemetry('worker', w.model_ID, w);
 
-      const defaultX = executionMode === 'parallel_map_reduce' 
-        ? workerNodeX + (index * xGap) 
-        : workerNodeX;
-      
-      const defaultY = executionMode === 'parallel_map_reduce'
-        ? 220
-        : currentY;
+      const defaultX = workerNodeX + (index * xGap);
+      const defaultY = workerNodeY;
 
       newNodes.push({
         id: w.ID,
@@ -756,6 +756,12 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       });
 
       // Edge from Supervisor to Worker (one bi-directional connector in sequential mode)
+      const edgeLabel = showTokenOverlay
+        ? (executionMode === 'sequential'
+          ? `🪙 ~${workerTelemetry.inputTokens.toLocaleString()} in / ~${workerTelemetry.outputTokens.toLocaleString()} out`
+          : `🪙 ~${workerTelemetry.inputTokens.toLocaleString()} tok`)
+        : undefined;
+
       newEdges.push({
         id: `e-sup-${w.ID}`,
         source: 'supervisor',
@@ -764,11 +770,11 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         targetHandle: 't',
         className: stateMode === 'scoped_subgraph' ? 'edge-scoped' : 'edge-global',
         animated: true,
-        label: showTokenOverlay ? `↗ ~${workerTelemetry.inputTokens.toLocaleString()} tok` : undefined,
-        labelStyle: { fill: '#333', fontWeight: 700, fontSize: 10 },
-        labelBgStyle: { fill: 'rgba(255, 255, 255, 0.9)', fillOpacity: 0.9, stroke: '#e2e8f0' },
-        labelBgPadding: [6, 4],
-        labelBgBorderRadius: 4,
+        label: edgeLabel,
+        labelStyle: { fill: '#0f172a', fontWeight: 700, fontSize: 11, fontFamily: 'Inter, sans-serif' },
+        labelBgStyle: { fill: 'rgba(255, 255, 255, 0.95)', fillOpacity: 0.95, stroke: '#cbd5e1', strokeWidth: 1 },
+        labelBgPadding: [8, 5],
+        labelBgBorderRadius: 6,
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: stateMode === 'scoped_subgraph' ? '#4f46e5' : '#ef4444',
@@ -780,8 +786,6 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           }
         } : {})
       });
-
-      currentY += 150;
     });
 
     // 3. Synthesizer
@@ -791,8 +795,8 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       const synthProv = getModelProvider(synthesizerModelId);
       const synthTelemetry = getNodeTelemetry('synthesizer', synthesizerModelId);
       
-      const defaultSynthX = workerNodeX + ((workers.length - 1) * xGap) / 2;
-      const defaultSynthY = 380;
+      const defaultSynthX = centerX;
+      const defaultSynthY = 440; // Centered below workers
 
       newNodes.push({
         id: synthId,
@@ -810,6 +814,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
       // Connect workers to Synthesizer
       workers.forEach((w) => {
+        const workerTelemetry = getNodeTelemetry('worker', w.model_ID, w);
         newEdges.push({
           id: `e-${w.ID}-synth`,
           source: w.ID,
@@ -818,11 +823,11 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           targetHandle: 't',
           className: stateMode === 'scoped_subgraph' ? 'edge-scoped' : 'edge-global',
           animated: true,
-          label: showTokenOverlay ? `↘ ~500 tok` : undefined,
-          labelStyle: { fill: '#333', fontWeight: 700, fontSize: 10 },
-          labelBgStyle: { fill: 'rgba(255, 255, 255, 0.9)', fillOpacity: 0.9, stroke: '#e2e8f0' },
-          labelBgPadding: [6, 4],
-          labelBgBorderRadius: 4,
+          label: showTokenOverlay ? `🪙 ~${workerTelemetry.outputTokens.toLocaleString()} tok` : undefined,
+          labelStyle: { fill: '#0f172a', fontWeight: 700, fontSize: 11, fontFamily: 'Inter, sans-serif' },
+          labelBgStyle: { fill: 'rgba(255, 255, 255, 0.95)', fillOpacity: 0.95, stroke: '#cbd5e1', strokeWidth: 1 },
+          labelBgPadding: [8, 5],
+          labelBgBorderRadius: 6,
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: stateMode === 'scoped_subgraph' ? '#4f46e5' : '#ef4444',
