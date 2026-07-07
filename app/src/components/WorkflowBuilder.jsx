@@ -336,7 +336,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           if (!data.error && data.ID) {
             setName(data.name || 'Loaded Workflow');
             setProject(data.project || '');
-            setExecutionMode(data.orchestrationPattern || 'sequential');
+            setExecutionMode((data.orchestrationPattern === 'subagents_router' ? 'sequential' : data.orchestrationPattern) || 'sequential');
             setStateMode(data.stateMode || 'scoped_subgraph');
             setComplexityProfile(data.complexityProfile || 'standard');
             setExpectedRoutingCycles(toNumber(data.expectedRoutingCycles, 4));
@@ -888,7 +888,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       const workflowData = {
         name,
         project,
-        orchestrationPattern: 'subagents_router',
+        orchestrationPattern: executionMode || 'sequential',
         stateMode,
         complexityProfile,
         expectedRoutingCycles: parseFloat(expectedRoutingCycles),

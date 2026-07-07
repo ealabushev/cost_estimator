@@ -57,7 +57,9 @@ type HitlPauseDuration : String enum {
 }
 
 type OrchestrationPattern : String enum {
-    subagents_router = 'subagents_router';
+    subagents_router    = 'subagents_router';
+    sequential          = 'sequential';
+    parallel_map_reduce = 'parallel_map_reduce';
 }
 
 // --- Input Configuration Entities ---
