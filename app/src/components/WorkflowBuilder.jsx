@@ -274,6 +274,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   // Flow control states
   const [isTemplateSelected, setIsTemplateSelected] = useState(false);
   const [isSpecsExpanded, setIsSpecsExpanded] = useState(true);
+  const [triggerAutoLayout, setTriggerAutoLayout] = useState(false);
 
   // Form inputs representing the active WorkflowConfig
   const [name, setName] = useState('New Agentic Workflow');
@@ -320,6 +321,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   // Token Telemetry and Pricing State
   const [modelPricing, setModelPricing] = useState([]);
   const [showTokenOverlay, setShowTokenOverlay] = useState(true);
+  const [showMiniMap, setShowMiniMap] = useState(false);
 
   // Error notifications
   const [errorMsg, setErrorMsg] = useState(null);
@@ -368,6 +370,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                 refinementIterations: toInteger(w.refinementIterations, 1)
               })));
             }
+            setTriggerAutoLayout(true);
           }
         })
         .catch(err => console.error("Error loading workflow config:", err));
@@ -547,6 +550,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         };
       });
       setWorkers(mappedWorkers);
+      setTriggerAutoLayout(true);
     }
     setIsTemplateSelected(true);
   };
@@ -873,8 +877,13 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
   // Synchronize layout when parameters change
   useEffect(() => {
-    recalculateLayout(false);
-  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, showTokenOverlay, modelPricing, supervisorSystemPromptTokens, workerRegistryTokens, avgToolSchemaTokens, recalculateLayout]);
+    if (triggerAutoLayout) {
+      recalculateLayout(true);
+      setTriggerAutoLayout(false);
+    } else {
+      recalculateLayout(false);
+    }
+  }, [workers, executionMode, stateMode, supervisorModelId, synthesizerModelId, name, models, showTokenOverlay, modelPricing, supervisorSystemPromptTokens, workerRegistryTokens, avgToolSchemaTokens, triggerAutoLayout, recalculateLayout]);
 
 
   // Deep save the workflow config and invoke estimation
@@ -1530,10 +1539,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                   }}
                 >
                   <Controls />
-                  <MiniMap />
+                  {showMiniMap && <MiniMap />}
                   <Background variant="dots" gap={12} size={1} />
                   <Panel position="top-right">
-                    <Card sx={{ p: 1, px: 1.5, boxShadow: 2, bgcolor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', borderRadius: 2 }}>
+                    <Card sx={{ p: 1, px: 1.5, boxShadow: 2, bgcolor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                       <FormControlLabel
                         control={
                           <Switch
@@ -1544,6 +1553,19 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                           />
                         }
                         label={<Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>Live Token Telemetry</Typography>}
+                        sx={{ m: 0 }}
+                      />
+                      <Divider orientation="vertical" flexItem sx={{ my: 0.5 }} />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            size="small"
+                            checked={showMiniMap}
+                            onChange={(e) => setShowMiniMap(e.target.checked)}
+                            color="primary"
+                          />
+                        }
+                        label={<Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>Mini-Map</Typography>}
                         sx={{ m: 0 }}
                       />
                     </Card>
