@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "imports": [
+    {
+      "target_table": "COSTESTIMATOR_COMPLEXITYPROFILERULES",
+      "source_data": {
+        "data_type": "CSV",
+        "file_name": "costestimator-ComplexityProfileRules.csv",
+        "has_header": true,
+        "type_config": {
+          "delimiter": ","
+        }
+      },
+      "import_settings": {
+        "import_columns": [
+          "ID",
+          "PROFILENAME",
+          "BASEROUTINGCYCLES",
+          "WORKERCOUNTDIVISOR",
+          "WORKERCOUNTMULTIPLIER",
+          "DESCRIPTION",
+          "ISDEFAULT",
+          "CREATEDAT",
+          "CREATEDBY",
+          "MODIFIEDAT",
+          "MODIFIEDBY"
+        ],
+        "include_filter": []
+      },
+      "column_mappings": {
+        "ID": "ID",
+        "PROFILENAME": "profileName",
+        "BASEROUTINGCYCLES": "baseRoutingCycles",
+        "WORKERCOUNTDIVISOR": "workerCountDivisor",
+        "WORKERCOUNTMULTIPLIER": "workerCountMultiplier",
+        "DESCRIPTION": "description",
+        "ISDEFAULT": "isDefault",
+        "CREATEDAT": "createdAt",
+        "CREATEDBY": "createdBy",
+        "MODIFIEDAT": "modifiedAt",
+        "MODIFIEDBY": "modifiedBy"
+      }
+    }
+  ]
+}

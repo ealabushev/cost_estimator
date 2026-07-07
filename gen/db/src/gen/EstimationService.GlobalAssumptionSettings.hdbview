@@ -1,0 +1,12 @@
+VIEW EstimationService_GlobalAssumptionSettings AS SELECT
+  GlobalAssumptionSettings_0.ID,
+  GlobalAssumptionSettings_0.createdAt,
+  GlobalAssumptionSettings_0.createdBy,
+  GlobalAssumptionSettings_0.modifiedAt,
+  GlobalAssumptionSettings_0.modifiedBy,
+  GlobalAssumptionSettings_0.settingKey,
+  GlobalAssumptionSettings_0.settingValue,
+  GlobalAssumptionSettings_0.settingType,
+  GlobalAssumptionSettings_0.category,
+  GlobalAssumptionSettings_0.description
+FROM costestimator_GlobalAssumptionSettings AS GlobalAssumptionSettings_0

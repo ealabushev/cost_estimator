@@ -1,0 +1,1 @@
+ID,scenario_ID,cycle,workerName,supervisorInputTokens,supervisorOutputTokens,workerInputTokens,workerOutputTokens,supervisorCostUsd,workerCostUsd,cacheDiscountUsd

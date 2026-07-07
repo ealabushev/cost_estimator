@@ -1,0 +1,1 @@
+UNIQUE INVERTED INDEX costestimator_ModelPricing_pricingKey ON costestimator_ModelPricing (provider, modelName, effectiveDate)

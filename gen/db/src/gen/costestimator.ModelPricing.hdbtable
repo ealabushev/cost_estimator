@@ -1,0 +1,23 @@
+COLUMN TABLE costestimator_ModelPricing (
+  ID NVARCHAR(36) NOT NULL,
+  createdAt TIMESTAMP,
+  createdBy NVARCHAR(255),
+  modifiedAt TIMESTAMP,
+  modifiedBy NVARCHAR(255),
+  provider NVARCHAR(5000) NOT NULL,
+  modelName NVARCHAR(100) NOT NULL,
+  inputPricePerMtok DECIMAL(10, 4) NOT NULL,
+  outputPricePerMtok DECIMAL(10, 4) NOT NULL,
+  cacheReadPricePerMtok DECIMAL(10, 4),
+  cacheWritePricePerMtok DECIMAL(10, 4),
+  thinkingPricePerMtok DECIMAL(10, 4),
+  batchDiscountPercent DECIMAL(5, 2),
+  contextWindowTokens INTEGER,
+  effectiveDate DATE NOT NULL,
+  source NVARCHAR(50),
+  genAiTokenInputRate DECIMAL(10, 6),
+  genAiTokenOutputRate DECIMAL(10, 6),
+  capacityUnitRate DECIMAL(10, 6),
+  btpCreditPerCapacityUnit DECIMAL(10, 4),
+  PRIMARY KEY(ID)
+)

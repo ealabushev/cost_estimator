@@ -1,0 +1,19 @@
+VIEW EstimationService_PerCycleCostBreakdowns AS SELECT
+  PerCycleCostBreakdowns_0.ID,
+  PerCycleCostBreakdowns_0.scenario_ID,
+  PerCycleCostBreakdowns_0.cycle,
+  PerCycleCostBreakdowns_0.workerName,
+  PerCycleCostBreakdowns_0.supervisorInputTokens,
+  PerCycleCostBreakdowns_0.supervisorOutputTokens,
+  PerCycleCostBreakdowns_0.workerInputTokens,
+  PerCycleCostBreakdowns_0.workerOutputTokens,
+  PerCycleCostBreakdowns_0.workerThinkingTokens,
+  PerCycleCostBreakdowns_0.inputCapacityUnits,
+  PerCycleCostBreakdowns_0.outputCapacityUnits,
+  PerCycleCostBreakdowns_0.totalCapacityUnits,
+  PerCycleCostBreakdowns_0.capacityUnitCostEur,
+  PerCycleCostBreakdowns_0.totalCapacityUnitCostEur,
+  PerCycleCostBreakdowns_0.supervisorCostUsd,
+  PerCycleCostBreakdowns_0.workerCostUsd,
+  PerCycleCostBreakdowns_0.cacheDiscountUsd
+FROM costestimator_PerCycleCostBreakdowns AS PerCycleCostBreakdowns_0

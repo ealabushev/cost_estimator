@@ -1,0 +1,22 @@
+VIEW EstimationService_ModelPricing AS SELECT
+  ModelPricing_0.ID,
+  ModelPricing_0.createdAt,
+  ModelPricing_0.createdBy,
+  ModelPricing_0.modifiedAt,
+  ModelPricing_0.modifiedBy,
+  ModelPricing_0.provider,
+  ModelPricing_0.modelName,
+  ModelPricing_0.inputPricePerMtok,
+  ModelPricing_0.outputPricePerMtok,
+  ModelPricing_0.cacheReadPricePerMtok,
+  ModelPricing_0.cacheWritePricePerMtok,
+  ModelPricing_0.thinkingPricePerMtok,
+  ModelPricing_0.batchDiscountPercent,
+  ModelPricing_0.contextWindowTokens,
+  ModelPricing_0.effectiveDate,
+  ModelPricing_0.source,
+  ModelPricing_0.genAiTokenInputRate,
+  ModelPricing_0.genAiTokenOutputRate,
+  ModelPricing_0.capacityUnitRate,
+  ModelPricing_0.btpCreditPerCapacityUnit
+FROM costestimator_ModelPricing AS ModelPricing_0

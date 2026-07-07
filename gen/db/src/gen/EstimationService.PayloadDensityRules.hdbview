@@ -1,0 +1,11 @@
+VIEW EstimationService_PayloadDensityRules AS SELECT
+  PayloadDensityRules_0.ID,
+  PayloadDensityRules_0.createdAt,
+  PayloadDensityRules_0.createdBy,
+  PayloadDensityRules_0.modifiedAt,
+  PayloadDensityRules_0.modifiedBy,
+  PayloadDensityRules_0.densityName,
+  PayloadDensityRules_0.avgObservationTokens,
+  PayloadDensityRules_0.description,
+  PayloadDensityRules_0.isDefault
+FROM costestimator_PayloadDensityRules AS PayloadDensityRules_0

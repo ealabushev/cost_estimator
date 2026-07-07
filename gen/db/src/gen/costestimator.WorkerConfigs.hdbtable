@@ -1,0 +1,21 @@
+COLUMN TABLE costestimator_WorkerConfigs (
+  ID NVARCHAR(36) NOT NULL,
+  workflow_ID NVARCHAR(36),
+  name NVARCHAR(100) NOT NULL,
+  roleDescription NVARCHAR(500),
+  model_ID NVARCHAR(36),
+  toolCount INTEGER NOT NULL,
+  taskType NVARCHAR(5000) DEFAULT 'analysis',
+  avgToolHops DECIMAL(4, 1),
+  avgObservationTokens INTEGER DEFAULT 200,
+  retryProbability DECIMAL(3, 2) DEFAULT 0.1,
+  invocationProbability DECIMAL(3, 2) DEFAULT 1.0,
+  maxRetriesPerCycle INTEGER DEFAULT 5,
+  useCustomToolHops BOOLEAN DEFAULT FALSE,
+  executionMode NVARCHAR(5000) DEFAULT 'sequential',
+  parallelInstances INTEGER DEFAULT 1,
+  isReflectorNode BOOLEAN DEFAULT FALSE,
+  refinementIterations INTEGER DEFAULT 1,
+  subWorkflow_ID NVARCHAR(36),
+  PRIMARY KEY(ID)
+)

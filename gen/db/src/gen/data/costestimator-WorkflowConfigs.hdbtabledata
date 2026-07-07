@@ -1,0 +1,79 @@
+{
+  "format_version": 1,
+  "imports": [
+    {
+      "target_table": "COSTESTIMATOR_WORKFLOWCONFIGS",
+      "source_data": {
+        "data_type": "CSV",
+        "file_name": "costestimator-WorkflowConfigs.csv",
+        "has_header": true,
+        "type_config": {
+          "delimiter": ","
+        }
+      },
+      "import_settings": {
+        "import_columns": [
+          "ID",
+          "NAME",
+          "PROJECT",
+          "ORCHESTRATIONPATTERN",
+          "SUPERVISORMODEL_ID",
+          "SYNTHESIZERMODEL_ID",
+          "STATEMODE",
+          "COMPLEXITYPROFILE",
+          "EXPECTEDROUTINGCYCLES",
+          "USECUSTOMROUTINGCYCLES",
+          "SUPERVISORSYSTEMPROMPTTOKENS",
+          "WORKERREGISTRYTOKENS",
+          "AVGTOOLSCHEMATOKENS",
+          "MESSAGETRIMMINGENABLED",
+          "MESSAGETRIMMINGMAXTOKENS",
+          "SUMMARIZATIONENABLED",
+          "AVGSUMMARYARTIFACTTOKENS",
+          "CHECKPOINTINGENABLED",
+          "HITLPAUSEDURATION",
+          "PROMPTCACHINGENABLED",
+          "ESTIMATEDCACHEHITRATE",
+          "MONTHLYRUNVOLUME",
+          "TAGS",
+          "NOTES",
+          "CREATEDAT",
+          "CREATEDBY",
+          "MODIFIEDAT",
+          "MODIFIEDBY"
+        ],
+        "include_filter": []
+      },
+      "column_mappings": {
+        "ID": "ID",
+        "NAME": "name",
+        "PROJECT": "project",
+        "ORCHESTRATIONPATTERN": "orchestrationPattern",
+        "SUPERVISORMODEL_ID": "supervisorModel_ID",
+        "SYNTHESIZERMODEL_ID": "synthesizerModel_ID",
+        "STATEMODE": "stateMode",
+        "COMPLEXITYPROFILE": "complexityProfile",
+        "EXPECTEDROUTINGCYCLES": "expectedRoutingCycles",
+        "USECUSTOMROUTINGCYCLES": "useCustomRoutingCycles",
+        "SUPERVISORSYSTEMPROMPTTOKENS": "supervisorSystemPromptTokens",
+        "WORKERREGISTRYTOKENS": "workerRegistryTokens",
+        "AVGTOOLSCHEMATOKENS": "avgToolSchemaTokens",
+        "MESSAGETRIMMINGENABLED": "messageTrimmingEnabled",
+        "MESSAGETRIMMINGMAXTOKENS": "messageTrimmingMaxTokens",
+        "SUMMARIZATIONENABLED": "summarizationEnabled",
+        "AVGSUMMARYARTIFACTTOKENS": "avgSummaryArtifactTokens",
+        "CHECKPOINTINGENABLED": "checkpointingEnabled",
+        "HITLPAUSEDURATION": "hitlPauseDuration",
+        "PROMPTCACHINGENABLED": "promptCachingEnabled",
+        "ESTIMATEDCACHEHITRATE": "estimatedCacheHitRate",
+        "MONTHLYRUNVOLUME": "monthlyRunVolume",
+        "TAGS": "tags",
+        "NOTES": "notes",
+        "CREATEDAT": "createdAt",
+        "CREATEDBY": "createdBy",
+        "MODIFIEDAT": "modifiedAt",
+        "MODIFIEDBY": "modifiedBy"
+      }
+    }
+  ]
+}

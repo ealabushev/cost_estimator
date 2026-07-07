@@ -1,0 +1,14 @@
+COLUMN TABLE costestimator_ComplexityProfileRules (
+  ID NVARCHAR(36) NOT NULL,
+  createdAt TIMESTAMP,
+  createdBy NVARCHAR(255),
+  modifiedAt TIMESTAMP,
+  modifiedBy NVARCHAR(255),
+  profileName NVARCHAR(5000) NOT NULL,
+  baseRoutingCycles DECIMAL(4, 1) NOT NULL,
+  workerCountDivisor DECIMAL(4, 1) DEFAULT 1.0,
+  workerCountMultiplier DECIMAL(3, 2) DEFAULT 0.5,
+  description NVARCHAR(300),
+  isDefault BOOLEAN DEFAULT FALSE,
+  PRIMARY KEY(ID)
+)

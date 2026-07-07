@@ -1,0 +1,12 @@
+VIEW EstimationService_Estimations AS SELECT
+  Estimations_0.ID,
+  Estimations_0.createdAt,
+  Estimations_0.createdBy,
+  Estimations_0.modifiedAt,
+  Estimations_0.modifiedBy,
+  Estimations_0.workflow_ID,
+  Estimations_0.capacityUnitsPerToken,
+  Estimations_0.capacityUnitCostEur,
+  Estimations_0.pricingSnapshot,
+  Estimations_0.warnings
+FROM costestimator_Estimations AS Estimations_0

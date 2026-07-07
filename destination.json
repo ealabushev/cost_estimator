@@ -1,0 +1,23 @@
+{
+    "HTML5Runtime_enabled": true,
+    "version": "1.0.0",
+    "init_data": {
+      "instance": {
+        "existing_destinations_policy": "update",
+        "destinations": [
+          {
+            "Name": "AI_CORE_DESTINATION_HUB",
+            "Description": "Automatically generated AI CORE destination",
+            "Authentication": "OAuth2ClientCredentials",
+            "ProxyType": "Internet",
+            "Type": "HTTP",
+            "URL": "https://api.ai.prod.eu-central-1.aws.ml.hana.ondemand.com",
+            "clientId": "sb-a5539db1-cc8c-4104-908a-ab05038c5c06!b334796|aicore!b540", 
+            "clientSecret": "4af874fc-82ab-4a3b-9b0b-ca57d9ecf927$SrFgnpuaSeSeLfqcTsmHKP8dpJngpvz26osWDO0VwZ0=",
+            "tokenServiceURL": "https://sap-btp-demo-de-ai-hub-7gsgcm9b.authentication.eu10.hana.ondemand.com/oauth/token",
+            "HTML5.Timeout": 300000
+          }
+        ]
+      }
+    }
+  }

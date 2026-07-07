@@ -1,0 +1,47 @@
+{
+  "format_version": 1,
+  "imports": [
+    {
+      "target_table": "COSTESTIMATOR_MODELCONFIGS",
+      "source_data": {
+        "data_type": "CSV",
+        "file_name": "costestimator-ModelConfigs.csv",
+        "has_header": true,
+        "type_config": {
+          "delimiter": ","
+        }
+      },
+      "import_settings": {
+        "import_columns": [
+          "ID",
+          "MODELNAME",
+          "PROVIDER",
+          "DESCRIPTION",
+          "CAPABILITIES",
+          "CUSTOMPRICEINPUTPERMTOK",
+          "CUSTOMPRICEOUTPUTPERMTOK",
+          "CUSTOMPRICECACHEREADPERMTOK",
+          "CONTEXTWINDOWTOKENS",
+          "THINKINGTOKENMULTIPLIER",
+          "SUPPORTSPROMPTCACHING",
+          "SUPPORTSEXTENDEDTHINKING"
+        ],
+        "include_filter": []
+      },
+      "column_mappings": {
+        "ID": "ID",
+        "MODELNAME": "modelName",
+        "PROVIDER": "provider",
+        "DESCRIPTION": "description",
+        "CAPABILITIES": "capabilities",
+        "CUSTOMPRICEINPUTPERMTOK": "customPriceInputPerMtok",
+        "CUSTOMPRICEOUTPUTPERMTOK": "customPriceOutputPerMtok",
+        "CUSTOMPRICECACHEREADPERMTOK": "customPriceCacheReadPerMtok",
+        "CONTEXTWINDOWTOKENS": "contextWindowTokens",
+        "THINKINGTOKENMULTIPLIER": "thinkingTokenMultiplier",
+        "SUPPORTSPROMPTCACHING": "supportsPromptCaching",
+        "SUPPORTSEXTENDEDTHINKING": "supportsExtendedThinking"
+      }
+    }
+  ]
+}

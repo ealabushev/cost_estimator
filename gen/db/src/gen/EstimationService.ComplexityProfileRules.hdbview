@@ -1,0 +1,13 @@
+VIEW EstimationService_ComplexityProfileRules AS SELECT
+  ComplexityProfileRules_0.ID,
+  ComplexityProfileRules_0.createdAt,
+  ComplexityProfileRules_0.createdBy,
+  ComplexityProfileRules_0.modifiedAt,
+  ComplexityProfileRules_0.modifiedBy,
+  ComplexityProfileRules_0.profileName,
+  ComplexityProfileRules_0.baseRoutingCycles,
+  ComplexityProfileRules_0.workerCountDivisor,
+  ComplexityProfileRules_0.workerCountMultiplier,
+  ComplexityProfileRules_0.description,
+  ComplexityProfileRules_0.isDefault
+FROM costestimator_ComplexityProfileRules AS ComplexityProfileRules_0

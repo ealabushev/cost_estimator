@@ -1,0 +1,15 @@
+VIEW EstimationService_ScenarioResults AS SELECT
+  ScenarioResults_0.ID,
+  ScenarioResults_0.estimation_ID,
+  ScenarioResults_0.scenarioName,
+  ScenarioResults_0.totalInputTokens,
+  ScenarioResults_0.totalOutputTokens,
+  ScenarioResults_0.totalThinkingTokens,
+  ScenarioResults_0.redundantContextRatio,
+  ScenarioResults_0.costPerRunUsd,
+  ScenarioResults_0.monthlyTcoUsd,
+  ScenarioResults_0.costPerRunBtpCredits,
+  ScenarioResults_0.monthlyTcoBtpCredits,
+  ScenarioResults_0.totalGenAiTokens,
+  ScenarioResults_0.totalCapacityUnits
+FROM costestimator_ScenarioResults AS ScenarioResults_0

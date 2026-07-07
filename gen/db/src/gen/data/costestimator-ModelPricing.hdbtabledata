@@ -1,0 +1,63 @@
+{
+  "format_version": 1,
+  "imports": [
+    {
+      "target_table": "COSTESTIMATOR_MODELPRICING",
+      "source_data": {
+        "data_type": "CSV",
+        "file_name": "costestimator-ModelPricing.csv",
+        "has_header": true,
+        "type_config": {
+          "delimiter": ","
+        }
+      },
+      "import_settings": {
+        "import_columns": [
+          "ID",
+          "PROVIDER",
+          "MODELNAME",
+          "INPUTPRICEPERMTOK",
+          "OUTPUTPRICEPERMTOK",
+          "CACHEREADPRICEPERMTOK",
+          "CACHEWRITEPRICEPERMTOK",
+          "THINKINGPRICEPERMTOK",
+          "BATCHDISCOUNTPERCENT",
+          "CONTEXTWINDOWTOKENS",
+          "EFFECTIVEDATE",
+          "SOURCE",
+          "GENAITOKENINPUTRATE",
+          "GENAITOKENOUTPUTRATE",
+          "CAPACITYUNITRATE",
+          "BTPCREDITPERCAPACITYUNIT",
+          "CREATEDAT",
+          "CREATEDBY",
+          "MODIFIEDAT",
+          "MODIFIEDBY"
+        ],
+        "include_filter": []
+      },
+      "column_mappings": {
+        "ID": "ID",
+        "PROVIDER": "provider",
+        "MODELNAME": "modelName",
+        "INPUTPRICEPERMTOK": "inputPricePerMtok",
+        "OUTPUTPRICEPERMTOK": "outputPricePerMtok",
+        "CACHEREADPRICEPERMTOK": "cacheReadPricePerMtok",
+        "CACHEWRITEPRICEPERMTOK": "cacheWritePricePerMtok",
+        "THINKINGPRICEPERMTOK": "thinkingPricePerMtok",
+        "BATCHDISCOUNTPERCENT": "batchDiscountPercent",
+        "CONTEXTWINDOWTOKENS": "contextWindowTokens",
+        "EFFECTIVEDATE": "effectiveDate",
+        "SOURCE": "source",
+        "GENAITOKENINPUTRATE": "genAiTokenInputRate",
+        "GENAITOKENOUTPUTRATE": "genAiTokenOutputRate",
+        "CAPACITYUNITRATE": "capacityUnitRate",
+        "BTPCREDITPERCAPACITYUNIT": "btpCreditPerCapacityUnit",
+        "CREATEDAT": "createdAt",
+        "CREATEDBY": "createdBy",
+        "MODIFIEDAT": "modifiedAt",
+        "MODIFIEDBY": "modifiedBy"
+      }
+    }
+  ]
+}

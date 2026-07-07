@@ -1,0 +1,12 @@
+COLUMN TABLE costestimator_PayloadDensityRules (
+  ID NVARCHAR(36) NOT NULL,
+  createdAt TIMESTAMP,
+  createdBy NVARCHAR(255),
+  modifiedAt TIMESTAMP,
+  modifiedBy NVARCHAR(255),
+  densityName NVARCHAR(50) NOT NULL,
+  avgObservationTokens INTEGER NOT NULL,
+  description NVARCHAR(300),
+  isDefault BOOLEAN DEFAULT FALSE,
+  PRIMARY KEY(ID)
+)

@@ -1,0 +1,14 @@
+VIEW EstimationService_ModelConfigs AS SELECT
+  ModelConfigs_0.ID,
+  ModelConfigs_0.modelName,
+  ModelConfigs_0.provider,
+  ModelConfigs_0.description,
+  ModelConfigs_0.capabilities,
+  ModelConfigs_0.customPriceInputPerMtok,
+  ModelConfigs_0.customPriceOutputPerMtok,
+  ModelConfigs_0.customPriceCacheReadPerMtok,
+  ModelConfigs_0.contextWindowTokens,
+  ModelConfigs_0.thinkingTokenMultiplier,
+  ModelConfigs_0.supportsPromptCaching,
+  ModelConfigs_0.supportsExtendedThinking
+FROM costestimator_ModelConfigs AS ModelConfigs_0

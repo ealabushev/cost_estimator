@@ -1,0 +1,13 @@
+COLUMN TABLE costestimator_GlobalAssumptionSettings (
+  ID NVARCHAR(36) NOT NULL,
+  createdAt TIMESTAMP,
+  createdBy NVARCHAR(255),
+  modifiedAt TIMESTAMP,
+  modifiedBy NVARCHAR(255),
+  settingKey NVARCHAR(100) NOT NULL,
+  settingValue NVARCHAR(200) NOT NULL,
+  settingType NVARCHAR(50) DEFAULT 'number',
+  category NVARCHAR(100),
+  description NVARCHAR(300),
+  PRIMARY KEY(ID)
+)

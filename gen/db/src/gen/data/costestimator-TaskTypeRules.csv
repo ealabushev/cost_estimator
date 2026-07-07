@@ -1,0 +1,7 @@
+ID,taskTypeName,baseToolHops,toolCountDivisor,toolCountMultiplier,description,isDefault,createdAt,createdBy,modifiedAt,modifiedBy
+55555555-5555-5555-5555-555555555551,simple_lookup,1.0,5,0.50,Single tool call with immediate return (e.g. Material Master read via OData),false,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+55555555-5555-5555-5555-555555555552,retrieval_response,2.0,5,0.50,1-2 tool calls with light processing (e.g. Read S/4HANA entity and format response),false,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+55555555-5555-5555-5555-555555555553,analysis,3.0,5,0.50,Multiple tool calls with intermediate reasoning (e.g. check PO and evaluate discrepancies),true,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+55555555-5555-5555-5555-555555555554,transformation,4.0,5,0.50,Chain of tool calls building on each other (e.g. extract validate enrich format),false,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+55555555-5555-5555-5555-555555555555,multi_step_reasoning,6.0,5,0.50,Deep ReAct loops with backtracking and retries (e.g. cross-system invoice matching),false,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+55555555-5555-5555-5555-555555555556,erp_data_pipeline,8.0,5,0.50,Extended chains of ERP data processing calls (e.g. batch PO migration or reconciliation),false,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system

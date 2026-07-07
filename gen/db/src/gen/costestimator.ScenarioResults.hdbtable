@@ -1,0 +1,16 @@
+COLUMN TABLE costestimator_ScenarioResults (
+  ID NVARCHAR(36) NOT NULL,
+  estimation_ID NVARCHAR(36),
+  scenarioName NVARCHAR(5000),
+  totalInputTokens INTEGER,
+  totalOutputTokens INTEGER,
+  totalThinkingTokens INTEGER,
+  redundantContextRatio DECIMAL(3, 2),
+  costPerRunUsd DECIMAL(10, 4),
+  monthlyTcoUsd DECIMAL(12, 2),
+  costPerRunBtpCredits DECIMAL(10, 4),
+  monthlyTcoBtpCredits DECIMAL(12, 2),
+  totalGenAiTokens INTEGER,
+  totalCapacityUnits DECIMAL(12, 4),
+  PRIMARY KEY(ID)
+)

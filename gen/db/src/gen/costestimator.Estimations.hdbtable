@@ -1,0 +1,13 @@
+COLUMN TABLE costestimator_Estimations (
+  ID NVARCHAR(36) NOT NULL,
+  createdAt TIMESTAMP,
+  createdBy NVARCHAR(255),
+  modifiedAt TIMESTAMP,
+  modifiedBy NVARCHAR(255),
+  workflow_ID NVARCHAR(36),
+  capacityUnitsPerToken DECIMAL(12, 5),
+  capacityUnitCostEur DECIMAL(10, 4),
+  pricingSnapshot NCLOB,
+  warnings NCLOB,
+  PRIMARY KEY(ID)
+)

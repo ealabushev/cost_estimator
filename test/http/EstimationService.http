@@ -1,0 +1,1060 @@
+@server=http://localhost:4004
+@username=alice
+@password=
+
+
+### ModelConfigs
+# @name ModelConfigs_GET
+GET {{server}}/api/v1/estimation/ModelConfigs
+Authorization: Basic {{username}}:{{password}}
+
+
+### ModelConfigs
+# @name ModelConfigs_POST
+POST {{server}}/api/v1/estimation/ModelConfigs
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "30352942-80e2-4a72-82f8-c569d51de780",
+  "modelName": "modelName-30352942",
+  "provider": "mistral",
+  "description": "description-30352942",
+  "capabilities": "capabilities-30352942",
+  "customPriceInputPerMtok": 588336.4237,
+  "customPriceOutputPerMtok": 992454.9235,
+  "customPriceCacheReadPerMtok": 633839.0081,
+  "contextWindowTokens": 11,
+  "thinkingTokenMultiplier": 66.7,
+  "supportsPromptCaching": true,
+  "supportsExtendedThinking": true
+}
+
+
+### ModelConfigs
+# @name ModelConfigs_PATCH
+PATCH {{server}}/api/v1/estimation/ModelConfigs/30352942-80e2-4a72-82f8-c569d51de780
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "30352942-80e2-4a72-82f8-c569d51de780",
+  "modelName": "modelName-30352942",
+  "provider": "mistral",
+  "description": "description-30352942",
+  "capabilities": "capabilities-30352942",
+  "customPriceInputPerMtok": 588336.4237,
+  "customPriceOutputPerMtok": 992454.9235,
+  "customPriceCacheReadPerMtok": 633839.0081,
+  "contextWindowTokens": 11,
+  "thinkingTokenMultiplier": 66.7,
+  "supportsPromptCaching": true,
+  "supportsExtendedThinking": true
+}
+
+
+### ModelConfigs
+# @name ModelConfigs_DELETE
+DELETE {{server}}/api/v1/estimation/ModelConfigs/30352942-80e2-4a72-82f8-c569d51de780
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### WorkerConfigs
+# @name WorkerConfigs_GET
+GET {{server}}/api/v1/estimation/WorkerConfigs
+Authorization: Basic {{username}}:{{password}}
+
+
+### WorkerConfigs
+# @name WorkerConfigs_POST
+POST {{server}}/api/v1/estimation/WorkerConfigs
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "15328395-890c-4262-8ccf-8051f2c0ba9e",
+  "name": "name-15328395",
+  "roleDescription": "roleDescription-15328395",
+  "model": {
+    "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+  },
+  "toolCount": 53,
+  "taskType": "simple_lookup",
+  "avgToolHops": 714.2,
+  "avgObservationTokens": 85,
+  "retryProbability": 0.71,
+  "invocationProbability": 0.94,
+  "maxRetriesPerCycle": 38,
+  "useCustomToolHops": false,
+  "executionMode": "sequential",
+  "parallelInstances": 82,
+  "isReflectorNode": false,
+  "refinementIterations": 73,
+  "subWorkflow": {
+    "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53"
+  }
+}
+
+
+### WorkerConfigs
+# @name WorkerConfigs_PATCH
+PATCH {{server}}/api/v1/estimation/WorkerConfigs/15328395-890c-4262-8ccf-8051f2c0ba9e
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "15328395-890c-4262-8ccf-8051f2c0ba9e",
+  "name": "name-15328395",
+  "roleDescription": "roleDescription-15328395",
+  "model": {
+    "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+  },
+  "toolCount": 53,
+  "taskType": "simple_lookup",
+  "avgToolHops": 714.2,
+  "avgObservationTokens": 85,
+  "retryProbability": 0.71,
+  "invocationProbability": 0.94,
+  "maxRetriesPerCycle": 38,
+  "useCustomToolHops": false,
+  "executionMode": "sequential",
+  "parallelInstances": 82,
+  "isReflectorNode": false,
+  "refinementIterations": 73,
+  "subWorkflow": {
+    "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53"
+  }
+}
+
+
+### WorkerConfigs
+# @name WorkerConfigs_DELETE
+DELETE {{server}}/api/v1/estimation/WorkerConfigs/15328395-890c-4262-8ccf-8051f2c0ba9e
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### WorkflowConfigs
+# @name WorkflowConfigs_GET
+GET {{server}}/api/v1/estimation/WorkflowConfigs
+Authorization: Basic {{username}}:{{password}}
+
+
+### WorkflowConfigs
+# @name WorkflowConfigs_POST
+POST {{server}}/api/v1/estimation/WorkflowConfigs
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53",
+  "name": "name-7927516",
+  "project": "project-7927516",
+  "orchestrationPattern": "subagents_router",
+  "supervisorModel": {
+    "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+  },
+  "synthesizerModel": {
+    "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+  },
+  "workers": [
+    {
+      "ID": "15328395-890c-4262-8ccf-8051f2c0ba9e",
+      "name": "name-15328395",
+      "roleDescription": "roleDescription-15328395",
+      "model": {
+        "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+      },
+      "toolCount": 53,
+      "taskType": "simple_lookup",
+      "avgToolHops": 714.2,
+      "avgObservationTokens": 85,
+      "retryProbability": 0.71,
+      "invocationProbability": 0.94,
+      "maxRetriesPerCycle": 38,
+      "useCustomToolHops": false,
+      "executionMode": "sequential",
+      "parallelInstances": 82,
+      "isReflectorNode": false,
+      "refinementIterations": 73,
+      "subWorkflow": {
+        "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53"
+      }
+    },
+    {
+      "ID": "15328396-6920-45f3-a7d9-17341ee62919",
+      "name": "name-15328396",
+      "roleDescription": "roleDescription-15328396",
+      "model": {
+        "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+      },
+      "toolCount": 53,
+      "taskType": "simple_lookup",
+      "avgToolHops": 599.7,
+      "avgObservationTokens": 74,
+      "retryProbability": 0.58,
+      "invocationProbability": 1.64,
+      "maxRetriesPerCycle": 32,
+      "useCustomToolHops": true,
+      "executionMode": "parallel_map_reduce",
+      "parallelInstances": 19,
+      "isReflectorNode": true,
+      "refinementIterations": 63,
+      "subWorkflow": {
+        "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53"
+      }
+    }
+  ],
+  "stateMode": "global_shared",
+  "complexityProfile": "simple",
+  "expectedRoutingCycles": 274,
+  "useCustomRoutingCycles": true,
+  "supervisorSystemPromptTokens": 73,
+  "workerRegistryTokens": 10,
+  "avgToolSchemaTokens": 61,
+  "messageTrimmingEnabled": true,
+  "messageTrimmingMaxTokens": 88,
+  "summarizationEnabled": true,
+  "avgSummaryArtifactTokens": 24,
+  "checkpointingEnabled": true,
+  "hitlPauseDuration": "short_under_5m",
+  "promptCachingEnabled": true,
+  "estimatedCacheHitRate": 0.64,
+  "monthlyRunVolume": 85,
+  "tags": "tags-7927516",
+  "notes": "notes-7927516",
+  "createdAt": "2016-06-27T23:00:00.000Z",
+  "createdBy": "createdBy.4pwws@example.net",
+  "modifiedAt": "2013-08-11T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.4pwws@example.org"
+}
+
+
+### WorkflowConfigs
+# @name WorkflowConfigs_PATCH
+PATCH {{server}}/api/v1/estimation/WorkflowConfigs/7927516a-d645-4a0c-bdf0-2711dc1dce53
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53",
+  "name": "name-7927516",
+  "project": "project-7927516",
+  "orchestrationPattern": "subagents_router",
+  "supervisorModel": {
+    "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+  },
+  "synthesizerModel": {
+    "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+  },
+  "workers": [
+    {
+      "ID": "15328395-890c-4262-8ccf-8051f2c0ba9e",
+      "name": "name-15328395",
+      "roleDescription": "roleDescription-15328395",
+      "model": {
+        "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+      },
+      "toolCount": 53,
+      "taskType": "simple_lookup",
+      "avgToolHops": 714.2,
+      "avgObservationTokens": 85,
+      "retryProbability": 0.71,
+      "invocationProbability": 0.94,
+      "maxRetriesPerCycle": 38,
+      "useCustomToolHops": false,
+      "executionMode": "sequential",
+      "parallelInstances": 82,
+      "isReflectorNode": false,
+      "refinementIterations": 73,
+      "subWorkflow": {
+        "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53"
+      }
+    },
+    {
+      "ID": "15328396-6920-45f3-a7d9-17341ee62919",
+      "name": "name-15328396",
+      "roleDescription": "roleDescription-15328396",
+      "model": {
+        "ID": "30352942-80e2-4a72-82f8-c569d51de780"
+      },
+      "toolCount": 53,
+      "taskType": "simple_lookup",
+      "avgToolHops": 599.7,
+      "avgObservationTokens": 74,
+      "retryProbability": 0.58,
+      "invocationProbability": 1.64,
+      "maxRetriesPerCycle": 32,
+      "useCustomToolHops": true,
+      "executionMode": "parallel_map_reduce",
+      "parallelInstances": 19,
+      "isReflectorNode": true,
+      "refinementIterations": 63,
+      "subWorkflow": {
+        "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53"
+      }
+    }
+  ],
+  "stateMode": "global_shared",
+  "complexityProfile": "simple",
+  "expectedRoutingCycles": 274,
+  "useCustomRoutingCycles": true,
+  "supervisorSystemPromptTokens": 73,
+  "workerRegistryTokens": 10,
+  "avgToolSchemaTokens": 61,
+  "messageTrimmingEnabled": true,
+  "messageTrimmingMaxTokens": 88,
+  "summarizationEnabled": true,
+  "avgSummaryArtifactTokens": 24,
+  "checkpointingEnabled": true,
+  "hitlPauseDuration": "short_under_5m",
+  "promptCachingEnabled": true,
+  "estimatedCacheHitRate": 0.64,
+  "monthlyRunVolume": 85,
+  "tags": "tags-7927516",
+  "notes": "notes-7927516",
+  "createdAt": "2016-06-27T23:00:00.000Z",
+  "createdBy": "createdBy.4pwws@example.net",
+  "modifiedAt": "2013-08-11T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.4pwws@example.org"
+}
+
+
+### WorkflowConfigs
+# @name WorkflowConfigs_DELETE
+DELETE {{server}}/api/v1/estimation/WorkflowConfigs/7927516a-d645-4a0c-bdf0-2711dc1dce53
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### Estimations
+# @name Estimations_GET
+GET {{server}}/api/v1/estimation/Estimations
+Authorization: Basic {{username}}:{{password}}
+
+
+### Estimations
+# @name Estimations_POST
+POST {{server}}/api/v1/estimation/Estimations
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "21903956-0b65-497a-a0e6-1fc65302dfba",
+  "workflow": {
+    "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53"
+  },
+  "scenarios": [
+    {
+      "ID": "3327457b-5464-43aa-af09-92874116000b",
+      "scenarioName": "fat_tail",
+      "totalInputTokens": 97,
+      "totalOutputTokens": 68,
+      "totalThinkingTokens": 1,
+      "redundantContextRatio": 1.52,
+      "costPerRunUsd": 780499.5649,
+      "monthlyTcoUsd": 4920580186,
+      "costPerRunBtpCredits": 287704.5217,
+      "monthlyTcoBtpCredits": 6316637510.05,
+      "totalGenAiTokens": 9,
+      "totalCapacityUnits": 57069226.7791,
+      "perCycleBreakdown": [
+        {
+          "ID": "21885182-409e-4c20-9f30-21254d4ed197",
+          "cycle": 11,
+          "workerName": "workerName-21885182",
+          "supervisorInputTokens": 30,
+          "supervisorOutputTokens": 8,
+          "workerInputTokens": 64,
+          "workerOutputTokens": 55,
+          "supervisorCostUsd": 9296.717832,
+          "workerCostUsd": 7569.336226,
+          "cacheDiscountUsd": 933.868419
+        },
+        {
+          "ID": "21885183-e652-4609-b76e-dff7840e40e9",
+          "cycle": 52,
+          "workerName": "workerName-21885183",
+          "supervisorInputTokens": 74,
+          "supervisorOutputTokens": 71,
+          "workerInputTokens": 62,
+          "workerOutputTokens": 18,
+          "supervisorCostUsd": 5428.970698,
+          "workerCostUsd": 3350.612279,
+          "cacheDiscountUsd": 5383.174182
+        }
+      ]
+    },
+    {
+      "ID": "33274587-d4b6-4d3d-a7e5-7b69ddb3c356",
+      "scenarioName": "optimistic",
+      "totalInputTokens": 79,
+      "totalOutputTokens": 56,
+      "totalThinkingTokens": 67,
+      "redundantContextRatio": 0,
+      "costPerRunUsd": 441159.7976,
+      "monthlyTcoUsd": 9693818572.72,
+      "costPerRunBtpCredits": 732288.3732,
+      "monthlyTcoBtpCredits": 6121948331.37,
+      "totalGenAiTokens": 39,
+      "totalCapacityUnits": 24608123.6579,
+      "perCycleBreakdown": [
+        {
+          "ID": "17950284-322a-4b73-8fef-3218cb730805",
+          "cycle": 90,
+          "workerName": "workerName-17950284",
+          "supervisorInputTokens": 74,
+          "supervisorOutputTokens": 86,
+          "workerInputTokens": 11,
+          "workerOutputTokens": 82,
+          "supervisorCostUsd": 9537.067476,
+          "workerCostUsd": 1186.97667,
+          "cacheDiscountUsd": 1063.459193
+        },
+        {
+          "ID": "17950285-e53c-4249-b750-2323e9266a90",
+          "cycle": 60,
+          "workerName": "workerName-17950285",
+          "supervisorInputTokens": 46,
+          "supervisorOutputTokens": 62,
+          "workerInputTokens": 75,
+          "workerOutputTokens": 22,
+          "supervisorCostUsd": 6362.703473,
+          "workerCostUsd": 8743.210722,
+          "cacheDiscountUsd": 5774.118897
+        }
+      ]
+    }
+  ],
+  "pricingSnapshot": "pricingSnapshot-21903956",
+  "warnings": "warnings-21903956",
+  "createdAt": "2018-10-06T23:00:00.000Z",
+  "createdBy": "createdBy.d1h78@example.com",
+  "modifiedAt": "2021-07-04T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.d1h78@example.net"
+}
+
+
+### Estimations
+# @name Estimations_PATCH
+PATCH {{server}}/api/v1/estimation/Estimations/21903956-0b65-497a-a0e6-1fc65302dfba
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "21903956-0b65-497a-a0e6-1fc65302dfba",
+  "workflow": {
+    "ID": "7927516a-d645-4a0c-bdf0-2711dc1dce53"
+  },
+  "scenarios": [
+    {
+      "ID": "3327457b-5464-43aa-af09-92874116000b",
+      "scenarioName": "fat_tail",
+      "totalInputTokens": 97,
+      "totalOutputTokens": 68,
+      "totalThinkingTokens": 1,
+      "redundantContextRatio": 1.52,
+      "costPerRunUsd": 780499.5649,
+      "monthlyTcoUsd": 4920580186,
+      "costPerRunBtpCredits": 287704.5217,
+      "monthlyTcoBtpCredits": 6316637510.05,
+      "totalGenAiTokens": 9,
+      "totalCapacityUnits": 57069226.7791,
+      "perCycleBreakdown": [
+        {
+          "ID": "21885182-409e-4c20-9f30-21254d4ed197",
+          "cycle": 11,
+          "workerName": "workerName-21885182",
+          "supervisorInputTokens": 30,
+          "supervisorOutputTokens": 8,
+          "workerInputTokens": 64,
+          "workerOutputTokens": 55,
+          "supervisorCostUsd": 9296.717832,
+          "workerCostUsd": 7569.336226,
+          "cacheDiscountUsd": 933.868419
+        },
+        {
+          "ID": "21885183-e652-4609-b76e-dff7840e40e9",
+          "cycle": 52,
+          "workerName": "workerName-21885183",
+          "supervisorInputTokens": 74,
+          "supervisorOutputTokens": 71,
+          "workerInputTokens": 62,
+          "workerOutputTokens": 18,
+          "supervisorCostUsd": 5428.970698,
+          "workerCostUsd": 3350.612279,
+          "cacheDiscountUsd": 5383.174182
+        }
+      ]
+    },
+    {
+      "ID": "33274587-d4b6-4d3d-a7e5-7b69ddb3c356",
+      "scenarioName": "optimistic",
+      "totalInputTokens": 79,
+      "totalOutputTokens": 56,
+      "totalThinkingTokens": 67,
+      "redundantContextRatio": 0,
+      "costPerRunUsd": 441159.7976,
+      "monthlyTcoUsd": 9693818572.72,
+      "costPerRunBtpCredits": 732288.3732,
+      "monthlyTcoBtpCredits": 6121948331.37,
+      "totalGenAiTokens": 39,
+      "totalCapacityUnits": 24608123.6579,
+      "perCycleBreakdown": [
+        {
+          "ID": "17950284-322a-4b73-8fef-3218cb730805",
+          "cycle": 90,
+          "workerName": "workerName-17950284",
+          "supervisorInputTokens": 74,
+          "supervisorOutputTokens": 86,
+          "workerInputTokens": 11,
+          "workerOutputTokens": 82,
+          "supervisorCostUsd": 9537.067476,
+          "workerCostUsd": 1186.97667,
+          "cacheDiscountUsd": 1063.459193
+        },
+        {
+          "ID": "17950285-e53c-4249-b750-2323e9266a90",
+          "cycle": 60,
+          "workerName": "workerName-17950285",
+          "supervisorInputTokens": 46,
+          "supervisorOutputTokens": 62,
+          "workerInputTokens": 75,
+          "workerOutputTokens": 22,
+          "supervisorCostUsd": 6362.703473,
+          "workerCostUsd": 8743.210722,
+          "cacheDiscountUsd": 5774.118897
+        }
+      ]
+    }
+  ],
+  "pricingSnapshot": "pricingSnapshot-21903956",
+  "warnings": "warnings-21903956",
+  "createdAt": "2018-10-06T23:00:00.000Z",
+  "createdBy": "createdBy.d1h78@example.com",
+  "modifiedAt": "2021-07-04T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.d1h78@example.net"
+}
+
+
+### Estimations
+# @name Estimations_DELETE
+DELETE {{server}}/api/v1/estimation/Estimations/21903956-0b65-497a-a0e6-1fc65302dfba
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### ScenarioResults
+# @name ScenarioResults_GET
+GET {{server}}/api/v1/estimation/ScenarioResults
+Authorization: Basic {{username}}:{{password}}
+
+
+### ScenarioResults
+# @name ScenarioResults_POST
+POST {{server}}/api/v1/estimation/ScenarioResults
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "3327457b-5464-43aa-af09-92874116000b",
+  "scenarioName": "fat_tail",
+  "totalInputTokens": 97,
+  "totalOutputTokens": 68,
+  "totalThinkingTokens": 1,
+  "redundantContextRatio": 1.52,
+  "costPerRunUsd": 780499.5649,
+  "monthlyTcoUsd": 4920580186,
+  "costPerRunBtpCredits": 287704.5217,
+  "monthlyTcoBtpCredits": 6316637510.05,
+  "totalGenAiTokens": 9,
+  "totalCapacityUnits": 57069226.7791,
+  "perCycleBreakdown": [
+    {
+      "ID": "21885182-409e-4c20-9f30-21254d4ed197",
+      "cycle": 11,
+      "workerName": "workerName-21885182",
+      "supervisorInputTokens": 30,
+      "supervisorOutputTokens": 8,
+      "workerInputTokens": 64,
+      "workerOutputTokens": 55,
+      "supervisorCostUsd": 9296.717832,
+      "workerCostUsd": 7569.336226,
+      "cacheDiscountUsd": 933.868419
+    },
+    {
+      "ID": "21885183-e652-4609-b76e-dff7840e40e9",
+      "cycle": 52,
+      "workerName": "workerName-21885183",
+      "supervisorInputTokens": 74,
+      "supervisorOutputTokens": 71,
+      "workerInputTokens": 62,
+      "workerOutputTokens": 18,
+      "supervisorCostUsd": 5428.970698,
+      "workerCostUsd": 3350.612279,
+      "cacheDiscountUsd": 5383.174182
+    }
+  ]
+}
+
+
+### ScenarioResults
+# @name ScenarioResults_PATCH
+PATCH {{server}}/api/v1/estimation/ScenarioResults/3327457b-5464-43aa-af09-92874116000b
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "3327457b-5464-43aa-af09-92874116000b",
+  "scenarioName": "fat_tail",
+  "totalInputTokens": 97,
+  "totalOutputTokens": 68,
+  "totalThinkingTokens": 1,
+  "redundantContextRatio": 1.52,
+  "costPerRunUsd": 780499.5649,
+  "monthlyTcoUsd": 4920580186,
+  "costPerRunBtpCredits": 287704.5217,
+  "monthlyTcoBtpCredits": 6316637510.05,
+  "totalGenAiTokens": 9,
+  "totalCapacityUnits": 57069226.7791,
+  "perCycleBreakdown": [
+    {
+      "ID": "21885182-409e-4c20-9f30-21254d4ed197",
+      "cycle": 11,
+      "workerName": "workerName-21885182",
+      "supervisorInputTokens": 30,
+      "supervisorOutputTokens": 8,
+      "workerInputTokens": 64,
+      "workerOutputTokens": 55,
+      "supervisorCostUsd": 9296.717832,
+      "workerCostUsd": 7569.336226,
+      "cacheDiscountUsd": 933.868419
+    },
+    {
+      "ID": "21885183-e652-4609-b76e-dff7840e40e9",
+      "cycle": 52,
+      "workerName": "workerName-21885183",
+      "supervisorInputTokens": 74,
+      "supervisorOutputTokens": 71,
+      "workerInputTokens": 62,
+      "workerOutputTokens": 18,
+      "supervisorCostUsd": 5428.970698,
+      "workerCostUsd": 3350.612279,
+      "cacheDiscountUsd": 5383.174182
+    }
+  ]
+}
+
+
+### ScenarioResults
+# @name ScenarioResults_DELETE
+DELETE {{server}}/api/v1/estimation/ScenarioResults/3327457b-5464-43aa-af09-92874116000b
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### PerCycleCostBreakdowns
+# @name PerCycleCostBreakdowns_GET
+GET {{server}}/api/v1/estimation/PerCycleCostBreakdowns
+Authorization: Basic {{username}}:{{password}}
+
+
+### PerCycleCostBreakdowns
+# @name PerCycleCostBreakdowns_POST
+POST {{server}}/api/v1/estimation/PerCycleCostBreakdowns
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "21885182-409e-4c20-9f30-21254d4ed197",
+  "cycle": 11,
+  "workerName": "workerName-21885182",
+  "supervisorInputTokens": 30,
+  "supervisorOutputTokens": 8,
+  "workerInputTokens": 64,
+  "workerOutputTokens": 55,
+  "supervisorCostUsd": 9296.717832,
+  "workerCostUsd": 7569.336226,
+  "cacheDiscountUsd": 933.868419
+}
+
+
+### PerCycleCostBreakdowns
+# @name PerCycleCostBreakdowns_PATCH
+PATCH {{server}}/api/v1/estimation/PerCycleCostBreakdowns/21885182-409e-4c20-9f30-21254d4ed197
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "21885182-409e-4c20-9f30-21254d4ed197",
+  "cycle": 11,
+  "workerName": "workerName-21885182",
+  "supervisorInputTokens": 30,
+  "supervisorOutputTokens": 8,
+  "workerInputTokens": 64,
+  "workerOutputTokens": 55,
+  "supervisorCostUsd": 9296.717832,
+  "workerCostUsd": 7569.336226,
+  "cacheDiscountUsd": 933.868419
+}
+
+
+### PerCycleCostBreakdowns
+# @name PerCycleCostBreakdowns_DELETE
+DELETE {{server}}/api/v1/estimation/PerCycleCostBreakdowns/21885182-409e-4c20-9f30-21254d4ed197
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### ModelPricing
+# @name ModelPricing_GET
+GET {{server}}/api/v1/estimation/ModelPricing
+Authorization: Basic {{username}}:{{password}}
+
+
+### ModelPricing
+# @name ModelPricing_POST
+POST {{server}}/api/v1/estimation/ModelPricing
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "28087304-23d2-410b-b74b-8aad07803d39",
+  "provider": "mistral",
+  "modelName": "modelName-28087304",
+  "inputPricePerMtok": 302599.9008,
+  "outputPricePerMtok": 944734.6983,
+  "cacheReadPricePerMtok": 627880.4323,
+  "cacheWritePricePerMtok": 803247.5766,
+  "thinkingPricePerMtok": 260272.5382,
+  "batchDiscountPercent": 841.82,
+  "contextWindowTokens": 4,
+  "effectiveDate": "2015-02-26",
+  "source": "source-28087304",
+  "genAiTokenInputRate": 4389.792519,
+  "genAiTokenOutputRate": 2219.606695,
+  "capacityUnitRate": 7544.605988,
+  "btpCreditPerCapacityUnit": 238016.4793,
+  "createdAt": "2017-12-21T23:00:00.000Z",
+  "createdBy": "createdBy.gq0aw@example.net",
+  "modifiedAt": "2014-12-07T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.gq0aw@example.com"
+}
+
+
+### ModelPricing
+# @name ModelPricing_PATCH
+PATCH {{server}}/api/v1/estimation/ModelPricing/28087304-23d2-410b-b74b-8aad07803d39
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "28087304-23d2-410b-b74b-8aad07803d39",
+  "provider": "mistral",
+  "modelName": "modelName-28087304",
+  "inputPricePerMtok": 302599.9008,
+  "outputPricePerMtok": 944734.6983,
+  "cacheReadPricePerMtok": 627880.4323,
+  "cacheWritePricePerMtok": 803247.5766,
+  "thinkingPricePerMtok": 260272.5382,
+  "batchDiscountPercent": 841.82,
+  "contextWindowTokens": 4,
+  "effectiveDate": "2015-02-26",
+  "source": "source-28087304",
+  "genAiTokenInputRate": 4389.792519,
+  "genAiTokenOutputRate": 2219.606695,
+  "capacityUnitRate": 7544.605988,
+  "btpCreditPerCapacityUnit": 238016.4793,
+  "createdAt": "2017-12-21T23:00:00.000Z",
+  "createdBy": "createdBy.gq0aw@example.net",
+  "modifiedAt": "2014-12-07T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.gq0aw@example.com"
+}
+
+
+### ModelPricing
+# @name ModelPricing_DELETE
+DELETE {{server}}/api/v1/estimation/ModelPricing/28087304-23d2-410b-b74b-8aad07803d39
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### ComplexityProfileRules
+# @name ComplexityProfileRules_GET
+GET {{server}}/api/v1/estimation/ComplexityProfileRules
+Authorization: Basic {{username}}:{{password}}
+
+
+### ComplexityProfileRules
+# @name ComplexityProfileRules_POST
+POST {{server}}/api/v1/estimation/ComplexityProfileRules
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "29549454-12db-4ec8-abe5-e16e44cb2973",
+  "profileName": "standard",
+  "baseRoutingCycles": 400.4,
+  "workerCountDivisor": 213.6,
+  "workerCountMultiplier": 1.71,
+  "description": "description-29549454",
+  "isDefault": true,
+  "createdAt": "2007-06-30T23:00:00.000Z",
+  "createdBy": "createdBy.hlci6@example.net",
+  "modifiedAt": "2019-08-31T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.hlci6@example.org"
+}
+
+
+### ComplexityProfileRules
+# @name ComplexityProfileRules_PATCH
+PATCH {{server}}/api/v1/estimation/ComplexityProfileRules/29549454-12db-4ec8-abe5-e16e44cb2973
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "29549454-12db-4ec8-abe5-e16e44cb2973",
+  "profileName": "standard",
+  "baseRoutingCycles": 400.4,
+  "workerCountDivisor": 213.6,
+  "workerCountMultiplier": 1.71,
+  "description": "description-29549454",
+  "isDefault": true,
+  "createdAt": "2007-06-30T23:00:00.000Z",
+  "createdBy": "createdBy.hlci6@example.net",
+  "modifiedAt": "2019-08-31T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.hlci6@example.org"
+}
+
+
+### ComplexityProfileRules
+# @name ComplexityProfileRules_DELETE
+DELETE {{server}}/api/v1/estimation/ComplexityProfileRules/29549454-12db-4ec8-abe5-e16e44cb2973
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### TaskTypeRules
+# @name TaskTypeRules_GET
+GET {{server}}/api/v1/estimation/TaskTypeRules
+Authorization: Basic {{username}}:{{password}}
+
+
+### TaskTypeRules
+# @name TaskTypeRules_POST
+POST {{server}}/api/v1/estimation/TaskTypeRules
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "28587897-e242-47f0-b353-a02c230b30d3",
+  "taskTypeName": "multi_step_reasoning",
+  "baseToolHops": 399,
+  "toolCountDivisor": 54,
+  "toolCountMultiplier": 8.27,
+  "description": "description-28587897",
+  "isDefault": false,
+  "createdAt": "2021-03-09T23:00:00.000Z",
+  "createdBy": "createdBy.h0qk9@example.com",
+  "modifiedAt": "2012-06-28T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.h0qk9@example.org"
+}
+
+
+### TaskTypeRules
+# @name TaskTypeRules_PATCH
+PATCH {{server}}/api/v1/estimation/TaskTypeRules/28587897-e242-47f0-b353-a02c230b30d3
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "28587897-e242-47f0-b353-a02c230b30d3",
+  "taskTypeName": "multi_step_reasoning",
+  "baseToolHops": 399,
+  "toolCountDivisor": 54,
+  "toolCountMultiplier": 8.27,
+  "description": "description-28587897",
+  "isDefault": false,
+  "createdAt": "2021-03-09T23:00:00.000Z",
+  "createdBy": "createdBy.h0qk9@example.com",
+  "modifiedAt": "2012-06-28T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.h0qk9@example.org"
+}
+
+
+### TaskTypeRules
+# @name TaskTypeRules_DELETE
+DELETE {{server}}/api/v1/estimation/TaskTypeRules/28587897-e242-47f0-b353-a02c230b30d3
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### PayloadDensityRules
+# @name PayloadDensityRules_GET
+GET {{server}}/api/v1/estimation/PayloadDensityRules
+Authorization: Basic {{username}}:{{password}}
+
+
+### PayloadDensityRules
+# @name PayloadDensityRules_POST
+POST {{server}}/api/v1/estimation/PayloadDensityRules
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "28530235-d8a0-4bfe-90a8-369bdc1f93e3",
+  "densityName": "densityName-28530235",
+  "avgObservationTokens": 45,
+  "description": "description-28530235",
+  "isDefault": false,
+  "createdAt": "2000-05-05T23:00:00.000Z",
+  "createdBy": "createdBy.gzi2j@example.net",
+  "modifiedAt": "2009-05-07T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.gzi2j@example.com"
+}
+
+
+### PayloadDensityRules
+# @name PayloadDensityRules_PATCH
+PATCH {{server}}/api/v1/estimation/PayloadDensityRules/28530235-d8a0-4bfe-90a8-369bdc1f93e3
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "28530235-d8a0-4bfe-90a8-369bdc1f93e3",
+  "densityName": "densityName-28530235",
+  "avgObservationTokens": 45,
+  "description": "description-28530235",
+  "isDefault": false,
+  "createdAt": "2000-05-05T23:00:00.000Z",
+  "createdBy": "createdBy.gzi2j@example.net",
+  "modifiedAt": "2009-05-07T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.gzi2j@example.com"
+}
+
+
+### PayloadDensityRules
+# @name PayloadDensityRules_DELETE
+DELETE {{server}}/api/v1/estimation/PayloadDensityRules/28530235-d8a0-4bfe-90a8-369bdc1f93e3
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### GlobalAssumptionSettings
+# @name GlobalAssumptionSettings_GET
+GET {{server}}/api/v1/estimation/GlobalAssumptionSettings
+Authorization: Basic {{username}}:{{password}}
+
+
+### GlobalAssumptionSettings
+# @name GlobalAssumptionSettings_POST
+POST {{server}}/api/v1/estimation/GlobalAssumptionSettings
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "25179259-5e7d-4a73-bda5-b8175c3856d1",
+  "settingKey": "settingKey-25179259",
+  "settingValue": "settingValue-25179259",
+  "settingType": "settingType-25179259",
+  "category": "category-25179259",
+  "description": "description-25179259",
+  "createdAt": "2007-07-27T23:00:00.000Z",
+  "createdBy": "createdBy.ezofv@example.com",
+  "modifiedAt": "2008-09-07T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.ezofv@example.com"
+}
+
+
+### GlobalAssumptionSettings
+# @name GlobalAssumptionSettings_PATCH
+PATCH {{server}}/api/v1/estimation/GlobalAssumptionSettings/25179259-5e7d-4a73-bda5-b8175c3856d1
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "ID": "25179259-5e7d-4a73-bda5-b8175c3856d1",
+  "settingKey": "settingKey-25179259",
+  "settingValue": "settingValue-25179259",
+  "settingType": "settingType-25179259",
+  "category": "category-25179259",
+  "description": "description-25179259",
+  "createdAt": "2007-07-27T23:00:00.000Z",
+  "createdBy": "createdBy.ezofv@example.com",
+  "modifiedAt": "2008-09-07T23:00:00.000Z",
+  "modifiedBy": "modifiedBy.ezofv@example.com"
+}
+
+
+### GlobalAssumptionSettings
+# @name GlobalAssumptionSettings_DELETE
+DELETE {{server}}/api/v1/estimation/GlobalAssumptionSettings/25179259-5e7d-4a73-bda5-b8175c3856d1
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+
+### runEstimation
+# @name runEstimation_POST
+POST {{server}}/api/v1/estimation/runEstimation
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "workflowId": "00000000-0000-0000-0000-000000000001"
+}
+
+
+### runMonteCarloSimulation
+# @name runMonteCarloSimulation_POST
+POST {{server}}/api/v1/estimation/runMonteCarloSimulation
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "workflowId": "00000000-0000-0000-0000-000000000001",
+  "iterations": 1000
+}
+
+
+
+### submitCalibration
+# @name submitCalibration_POST
+POST {{server}}/api/v1/estimation/submitCalibration
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "workflowId": "18863827-4592-4d59-9756-6d2f567c556c",
+  "executionId": "executionId-1886382",
+  "actualTokens": "actualTokens-1886382"
+}
+
+
+### refreshPricing
+# @name refreshPricing_POST
+POST {{server}}/api/v1/estimation/refreshPricing
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "provider": "provider-17731946"
+}
+
+
+### refreshAiHubPricing
+# @name refreshAiHubPricing_POST
+POST {{server}}/api/v1/estimation/refreshAiHubPricing
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{}
+
+
+### resetAssumptionsToDefaults
+# @name resetAssumptionsToDefaults_POST
+POST {{server}}/api/v1/estimation/resetAssumptionsToDefaults
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{}

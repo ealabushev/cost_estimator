@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "imports": [
+    {
+      "target_table": "COSTESTIMATOR_PERCYCLECOSTBREAKDOWNS",
+      "source_data": {
+        "data_type": "CSV",
+        "file_name": "costestimator-PerCycleCostBreakdowns.csv",
+        "has_header": true,
+        "type_config": {
+          "delimiter": ","
+        }
+      },
+      "import_settings": {
+        "import_columns": [
+          "ID",
+          "SCENARIO_ID",
+          "CYCLE",
+          "WORKERNAME",
+          "SUPERVISORINPUTTOKENS",
+          "SUPERVISOROUTPUTTOKENS",
+          "WORKERINPUTTOKENS",
+          "WORKEROUTPUTTOKENS",
+          "SUPERVISORCOSTUSD",
+          "WORKERCOSTUSD",
+          "CACHEDISCOUNTUSD"
+        ],
+        "include_filter": []
+      },
+      "column_mappings": {
+        "ID": "ID",
+        "SCENARIO_ID": "scenario_ID",
+        "CYCLE": "cycle",
+        "WORKERNAME": "workerName",
+        "SUPERVISORINPUTTOKENS": "supervisorInputTokens",
+        "SUPERVISOROUTPUTTOKENS": "supervisorOutputTokens",
+        "WORKERINPUTTOKENS": "workerInputTokens",
+        "WORKEROUTPUTTOKENS": "workerOutputTokens",
+        "SUPERVISORCOSTUSD": "supervisorCostUsd",
+        "WORKERCOSTUSD": "workerCostUsd",
+        "CACHEDISCOUNTUSD": "cacheDiscountUsd"
+      }
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "format_version": 1,
+  "imports": [
+    {
+      "target_table": "COSTESTIMATOR_ESTIMATIONS",
+      "source_data": {
+        "data_type": "CSV",
+        "file_name": "costestimator-Estimations.csv",
+        "has_header": true,
+        "type_config": {
+          "delimiter": ","
+        }
+      },
+      "import_settings": {
+        "import_columns": [
+          "ID",
+          "WORKFLOW_ID",
+          "PRICINGSNAPSHOT",
+          "WARNINGS",
+          "CREATEDAT",
+          "CREATEDBY",
+          "MODIFIEDAT",
+          "MODIFIEDBY"
+        ],
+        "include_filter": []
+      },
+      "column_mappings": {
+        "ID": "ID",
+        "WORKFLOW_ID": "workflow_ID",
+        "PRICINGSNAPSHOT": "pricingSnapshot",
+        "WARNINGS": "warnings",
+        "CREATEDAT": "createdAt",
+        "CREATEDBY": "createdBy",
+        "MODIFIEDAT": "modifiedAt",
+        "MODIFIEDBY": "modifiedBy"
+      }
+    }
+  ]
+}

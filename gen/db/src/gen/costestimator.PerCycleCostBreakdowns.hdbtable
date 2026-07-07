@@ -1,0 +1,20 @@
+COLUMN TABLE costestimator_PerCycleCostBreakdowns (
+  ID NVARCHAR(36) NOT NULL,
+  scenario_ID NVARCHAR(36),
+  cycle INTEGER,
+  workerName NVARCHAR(100),
+  supervisorInputTokens INTEGER,
+  supervisorOutputTokens INTEGER,
+  workerInputTokens INTEGER,
+  workerOutputTokens INTEGER,
+  workerThinkingTokens INTEGER,
+  inputCapacityUnits DECIMAL(12, 4),
+  outputCapacityUnits DECIMAL(12, 4),
+  totalCapacityUnits DECIMAL(12, 4),
+  capacityUnitCostEur DECIMAL(10, 4),
+  totalCapacityUnitCostEur DECIMAL(10, 6),
+  supervisorCostUsd DECIMAL(10, 6),
+  workerCostUsd DECIMAL(10, 6),
+  cacheDiscountUsd DECIMAL(10, 6),
+  PRIMARY KEY(ID)
+)

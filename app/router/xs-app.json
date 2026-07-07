@@ -1,0 +1,32 @@
+{
+  "welcomeFile": "/index.html",
+  "authenticationMethod": "route",
+  "routes": [
+    {
+      "source": "^/service/(.*)$",
+      "target": "/service/$1",
+      "destination": "srv-api",
+      "authenticationType": "xsuaa",
+      "csrfProtection": true
+    },
+    {
+      "source": "^/api/(.*)$",
+      "target": "/api/$1",
+      "destination": "srv-api",
+      "authenticationType": "none",
+      "csrfProtection": false
+    },
+    {
+      "source": "^/(assets/.*|static/.*|.*\\.(?:js|css|png|jpg|jpeg|svg|ico|json|webp|gif|woff2?|ttf|map))$",
+      "target": "/$1",
+      "localDir": "resources",
+      "authenticationType": "xsuaa"
+    },
+    {
+      "source": "^/(.*)$",
+      "target": "/index.html",
+      "localDir": "resources",
+      "authenticationType": "xsuaa"
+    }
+  ]
+}

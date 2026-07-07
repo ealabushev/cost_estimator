@@ -1,0 +1,49 @@
+{
+  "format_version": 1,
+  "imports": [
+    {
+      "target_table": "COSTESTIMATOR_SCENARIORESULTS",
+      "source_data": {
+        "data_type": "CSV",
+        "file_name": "costestimator-ScenarioResults.csv",
+        "has_header": true,
+        "type_config": {
+          "delimiter": ","
+        }
+      },
+      "import_settings": {
+        "import_columns": [
+          "ID",
+          "ESTIMATION_ID",
+          "SCENARIONAME",
+          "TOTALINPUTTOKENS",
+          "TOTALOUTPUTTOKENS",
+          "TOTALTHINKINGTOKENS",
+          "REDUNDANTCONTEXTRATIO",
+          "COSTPERRUNUSD",
+          "MONTHLYTCOUSD",
+          "COSTPERRUNBTPCREDITS",
+          "MONTHLYTCOBTPCREDITS",
+          "TOTALGENAITOKENS",
+          "TOTALCAPACITYUNITS"
+        ],
+        "include_filter": []
+      },
+      "column_mappings": {
+        "ID": "ID",
+        "ESTIMATION_ID": "estimation_ID",
+        "SCENARIONAME": "scenarioName",
+        "TOTALINPUTTOKENS": "totalInputTokens",
+        "TOTALOUTPUTTOKENS": "totalOutputTokens",
+        "TOTALTHINKINGTOKENS": "totalThinkingTokens",
+        "REDUNDANTCONTEXTRATIO": "redundantContextRatio",
+        "COSTPERRUNUSD": "costPerRunUsd",
+        "MONTHLYTCOUSD": "monthlyTcoUsd",
+        "COSTPERRUNBTPCREDITS": "costPerRunBtpCredits",
+        "MONTHLYTCOBTPCREDITS": "monthlyTcoBtpCredits",
+        "TOTALGENAITOKENS": "totalGenAiTokens",
+        "TOTALCAPACITYUNITS": "totalCapacityUnits"
+      }
+    }
+  ]
+}

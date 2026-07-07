@@ -1,0 +1,15 @@
+COLUMN TABLE costestimator_ModelConfigs (
+  ID NVARCHAR(36) NOT NULL,
+  modelName NVARCHAR(100) NOT NULL,
+  provider NVARCHAR(5000) NOT NULL,
+  description NVARCHAR(500),
+  capabilities NVARCHAR(300),
+  customPriceInputPerMtok DECIMAL(10, 4),
+  customPriceOutputPerMtok DECIMAL(10, 4),
+  customPriceCacheReadPerMtok DECIMAL(10, 4),
+  contextWindowTokens INTEGER,
+  thinkingTokenMultiplier DECIMAL(3, 1) DEFAULT 0.0,
+  supportsPromptCaching BOOLEAN DEFAULT FALSE,
+  supportsExtendedThinking BOOLEAN DEFAULT FALSE,
+  PRIMARY KEY(ID)
+)

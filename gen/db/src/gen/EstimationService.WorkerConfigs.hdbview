@@ -1,0 +1,20 @@
+VIEW EstimationService_WorkerConfigs AS SELECT
+  WorkerConfigs_0.ID,
+  WorkerConfigs_0.workflow_ID,
+  WorkerConfigs_0.name,
+  WorkerConfigs_0.roleDescription,
+  WorkerConfigs_0.model_ID,
+  WorkerConfigs_0.toolCount,
+  WorkerConfigs_0.taskType,
+  WorkerConfigs_0.avgToolHops,
+  WorkerConfigs_0.avgObservationTokens,
+  WorkerConfigs_0.retryProbability,
+  WorkerConfigs_0.invocationProbability,
+  WorkerConfigs_0.maxRetriesPerCycle,
+  WorkerConfigs_0.useCustomToolHops,
+  WorkerConfigs_0.executionMode,
+  WorkerConfigs_0.parallelInstances,
+  WorkerConfigs_0.isReflectorNode,
+  WorkerConfigs_0.refinementIterations,
+  WorkerConfigs_0.subWorkflow_ID
+FROM costestimator_WorkerConfigs AS WorkerConfigs_0

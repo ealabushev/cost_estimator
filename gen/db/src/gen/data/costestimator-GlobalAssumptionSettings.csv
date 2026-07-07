@@ -1,0 +1,11 @@
+ID,settingKey,settingValue,settingType,category,description,createdAt,createdBy,modifiedAt,modifiedBy
+77777777-7777-7777-7777-777777777771,default_analyst_rate_usd,50.00,number,finops_roi,Standard FI/CO/MM/SD Analyst hourly rate from SAP Signavio/VLM benchmarks,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+77777777-7777-7777-7777-777777777772,default_review_time_mins,15.00,number,finops_roi,Average manual discrepancy review time per ERP transaction from SAP Signavio,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+77777777-7777-7777-7777-777777777773,default_retry_probability,0.10,number,stochastic_retry,Per-invocation error retry probability due to rate limits or timeouts,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+77777777-7777-7777-7777-777777777774,default_max_retries_per_cycle,5,number,stochastic_retry,Cap on retry attempts per cycle before failing over,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+77777777-7777-7777-7777-777777777775,default_supervisor_prompt_tokens,500,number,token_overhead,Base system prompt tokens for central supervisor router,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+77777777-7777-7777-7777-777777777776,default_worker_registry_tokens,200,number,token_overhead,Tokens consumed by supervisor worker description registry,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+77777777-7777-7777-7777-777777777777,default_tool_schema_tokens,250,number,token_overhead,Average tokens per tool schema bound via bind_tools,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+77777777-7777-7777-7777-777777777778,default_summary_artifact_tokens,150,number,token_overhead,Average tokens per rolling summary artifact,2026-07-05T00:00:00Z,system,2026-07-05T00:00:00Z,system
+77777777-7777-7777-7777-777777777779,capacity_units_per_token,1.90385,number,genai_hub_pricing,Capacity Units multiplier for API-cost-weighted GenAI Hub token consumption,2026-07-06T00:00:00Z,system,2026-07-06T00:00:00Z,system
+77777777-7777-7777-7777-777777777780,capacity_unit_cost_eur,1.04,number,genai_hub_pricing,EUR cost per SAP BTP Capacity Unit used to convert CU to actual money,2026-07-06T00:00:00Z,system,2026-07-06T00:00:00Z,system

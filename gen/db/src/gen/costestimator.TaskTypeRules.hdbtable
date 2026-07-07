@@ -1,0 +1,14 @@
+COLUMN TABLE costestimator_TaskTypeRules (
+  ID NVARCHAR(36) NOT NULL,
+  createdAt TIMESTAMP,
+  createdBy NVARCHAR(255),
+  modifiedAt TIMESTAMP,
+  modifiedBy NVARCHAR(255),
+  taskTypeName NVARCHAR(5000) NOT NULL,
+  baseToolHops DECIMAL(4, 1) NOT NULL,
+  toolCountDivisor INTEGER DEFAULT 5,
+  toolCountMultiplier DECIMAL(3, 2) DEFAULT 0.5,
+  description NVARCHAR(300),
+  isDefault BOOLEAN DEFAULT FALSE,
+  PRIMARY KEY(ID)
+)

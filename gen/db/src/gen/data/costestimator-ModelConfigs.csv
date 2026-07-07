@@ -1,0 +1,1 @@
+ID,modelName,provider,description,capabilities,customPriceInputPerMtok,customPriceOutputPerMtok,customPriceCacheReadPerMtok,contextWindowTokens,thinkingTokenMultiplier,supportsPromptCaching,supportsExtendedThinking

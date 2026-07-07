@@ -1,0 +1,13 @@
+VIEW EstimationService_TaskTypeRules AS SELECT
+  TaskTypeRules_0.ID,
+  TaskTypeRules_0.createdAt,
+  TaskTypeRules_0.createdBy,
+  TaskTypeRules_0.modifiedAt,
+  TaskTypeRules_0.modifiedBy,
+  TaskTypeRules_0.taskTypeName,
+  TaskTypeRules_0.baseToolHops,
+  TaskTypeRules_0.toolCountDivisor,
+  TaskTypeRules_0.toolCountMultiplier,
+  TaskTypeRules_0.description,
+  TaskTypeRules_0.isDefault
+FROM costestimator_TaskTypeRules AS TaskTypeRules_0

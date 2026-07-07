@@ -1,0 +1,59 @@
+{
+  "format_version": 1,
+  "imports": [
+    {
+      "target_table": "COSTESTIMATOR_WORKERCONFIGS",
+      "source_data": {
+        "data_type": "CSV",
+        "file_name": "costestimator-WorkerConfigs.csv",
+        "has_header": true,
+        "type_config": {
+          "delimiter": ","
+        }
+      },
+      "import_settings": {
+        "import_columns": [
+          "ID",
+          "WORKFLOW_ID",
+          "NAME",
+          "ROLEDESCRIPTION",
+          "MODEL_ID",
+          "TOOLCOUNT",
+          "TASKTYPE",
+          "AVGTOOLHOPS",
+          "AVGOBSERVATIONTOKENS",
+          "RETRYPROBABILITY",
+          "INVOCATIONPROBABILITY",
+          "MAXRETRIESPERCYCLE",
+          "USECUSTOMTOOLHOPS",
+          "EXECUTIONMODE",
+          "PARALLELINSTANCES",
+          "ISREFLECTORNODE",
+          "REFINEMENTITERATIONS",
+          "SUBWORKFLOW_ID"
+        ],
+        "include_filter": []
+      },
+      "column_mappings": {
+        "ID": "ID",
+        "WORKFLOW_ID": "workflow_ID",
+        "NAME": "name",
+        "ROLEDESCRIPTION": "roleDescription",
+        "MODEL_ID": "model_ID",
+        "TOOLCOUNT": "toolCount",
+        "TASKTYPE": "taskType",
+        "AVGTOOLHOPS": "avgToolHops",
+        "AVGOBSERVATIONTOKENS": "avgObservationTokens",
+        "RETRYPROBABILITY": "retryProbability",
+        "INVOCATIONPROBABILITY": "invocationProbability",
+        "MAXRETRIESPERCYCLE": "maxRetriesPerCycle",
+        "USECUSTOMTOOLHOPS": "useCustomToolHops",
+        "EXECUTIONMODE": "executionMode",
+        "PARALLELINSTANCES": "parallelInstances",
+        "ISREFLECTORNODE": "isReflectorNode",
+        "REFINEMENTITERATIONS": "refinementIterations",
+        "SUBWORKFLOW_ID": "subWorkflow_ID"
+      }
+    }
+  ]
+}
