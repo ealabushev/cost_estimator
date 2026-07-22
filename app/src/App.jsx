@@ -91,7 +91,7 @@ const theme = createTheme({
 });
 
 function App() {
-  const [activeTab, setActiveTab] = useState('explain');
+  const [activeTab, setActiveTab] = useState('history');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState(null);
   const [selectedEstimation, setSelectedEstimation] = useState(null);
 
@@ -122,24 +122,24 @@ function App() {
             </Box>
 
             <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary" aria-label="application navigation">
-              <Tab value="explain" label="Explain Model" icon={<LightbulbIcon />} iconPosition="start" sx={{ minHeight: 64, fontWeight: 600 }} />
               <Tab value="history" label="History" icon={<HistoryIcon />} iconPosition="start" sx={{ minHeight: 64, fontWeight: 600 }} />
               <Tab value="builder" label="Estimate" icon={<CalculateIcon />} iconPosition="start" sx={{ minHeight: 64, fontWeight: 600 }} />
+              <Tab value="explain" label="Explain Model" icon={<LightbulbIcon />} iconPosition="start" sx={{ minHeight: 64, fontWeight: 600 }} />
               <Tab value="admin" label="Pricing & settings" icon={<SettingsSuggestIcon />} iconPosition="start" sx={{ minHeight: 64, fontWeight: 600 }} />
             </Tabs>
           </Toolbar>
         </AppBar>
 
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          {activeTab === 'explain' && (
-            <ModelExplanation />
-          )}
           {activeTab === 'builder' && (
             <WorkflowBuilder 
               workflowId={selectedWorkflowId} 
               initialEstimation={selectedEstimation} 
               onLoadWorkflow={handleLoadWorkflow}
             />
+          )}
+          {activeTab === 'explain' && (
+            <ModelExplanation />
           )}
           {activeTab === 'history' && (
             <HistoryComparison 
