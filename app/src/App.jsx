@@ -6,10 +6,12 @@ import CalculateIcon from '@mui/icons-material/Calculate';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
 
 import WorkflowBuilder from './components/WorkflowBuilder';
 import HistoryComparison from './components/HistoryComparison';
 import PricingAdmin from './components/PricingAdmin';
+import ModelExplanation from './components/ModelExplanation';
 
 // Custom theme mapping the Titanium Slate aesthetic
 const theme = createTheme({
@@ -89,7 +91,7 @@ const theme = createTheme({
 });
 
 function App() {
-  const [activeTab, setActiveTab] = useState('history');
+  const [activeTab, setActiveTab] = useState('explain');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState(null);
   const [selectedEstimation, setSelectedEstimation] = useState(null);
 
@@ -120,6 +122,7 @@ function App() {
             </Box>
 
             <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary" aria-label="application navigation">
+              <Tab value="explain" label="Explain Model" icon={<LightbulbIcon />} iconPosition="start" sx={{ minHeight: 64, fontWeight: 600 }} />
               <Tab value="history" label="History" icon={<HistoryIcon />} iconPosition="start" sx={{ minHeight: 64, fontWeight: 600 }} />
               <Tab value="builder" label="Estimate" icon={<CalculateIcon />} iconPosition="start" sx={{ minHeight: 64, fontWeight: 600 }} />
               <Tab value="admin" label="Pricing & settings" icon={<SettingsSuggestIcon />} iconPosition="start" sx={{ minHeight: 64, fontWeight: 600 }} />
@@ -128,6 +131,9 @@ function App() {
         </AppBar>
 
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          {activeTab === 'explain' && (
+            <ModelExplanation />
+          )}
           {activeTab === 'builder' && (
             <WorkflowBuilder 
               workflowId={selectedWorkflowId} 
