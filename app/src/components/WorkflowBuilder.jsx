@@ -1041,139 +1041,160 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           gap: 4 
         }}>
           {/* Header Hero Section */}
-          <Box sx={{ textAlign: 'center', mb: 2 }}>
-            <Typography variant="h3" sx={{ 
-              fontWeight: 800, 
+          <Box sx={{ textAlign: 'center', mb: 1 }}>
+            <Typography variant="h5" sx={{ 
+              fontWeight: 700, 
               fontFamily: '"Outfit", sans-serif', 
               color: 'secondary.main',
-              mb: 1.5,
+              mb: 1,
               background: 'linear-gradient(135deg, #0f172a 0%, #4f46e5 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
               Choose a Workflow Template to Start
             </Typography>
-            <Typography variant="subtitle1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', fontWeight: 500 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', fontWeight: 500 }}>
               Select from our pre-configured enterprise SAP templates optimized for agentic orchestration, or start with a custom blank canvas.
             </Typography>
           </Box>
 
           {/* Template Grid */}
-          <Grid container spacing={3}>
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, 
+            gap: 3 
+          }}>
             {TEMPLATE_PRESETS.map((t, idx) => {
               const isCustom = t.name === 'Custom Workflow';
               return (
-                <Grid item xs={12} sm={6} md={4} key={idx}>
-                  <Card 
-                    onClick={() => handleApplyTemplate(t)}
-                    sx={{ 
-                      cursor: 'pointer', 
-                      height: '100%',
+                <Card 
+                  key={idx}
+                  onClick={() => handleApplyTemplate(t)}
+                  sx={{ 
+                    cursor: 'pointer', 
+                    height: 300,
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '4px',
+                      background: isCustom 
+                        ? 'linear-gradient(90deg, #64748b 0%, #475569 100%)' 
+                        : 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 100%)',
+                    },
+                    '&:hover': { 
+                      borderColor: isCustom ? 'text.secondary' : 'primary.main', 
+                      boxShadow: '0 12px 30px rgba(79, 70, 229, 0.12)', 
+                      transform: 'translateY(-6px)' 
+                    }
+                  }}
+                >
+                  <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 48 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: 'secondary.main', lineHeight: 1.2, fontSize: '1rem' }}>
+                        {t.name}
+                      </Typography>
+                      {isCustom ? (
+                        <Chip 
+                          label="Custom" 
+                          size="small" 
+                          variant="outlined" 
+                          sx={{ 
+                            fontWeight: 700, 
+                            fontSize: '10px', 
+                            height: 20, 
+                            color: 'text.secondary', 
+                            borderColor: 'divider',
+                            flexShrink: 0,
+                            ml: 1
+                          }} 
+                        />
+                      ) : (
+                        <Chip 
+                          label="SAP Preset" 
+                          size="small" 
+                          sx={{ 
+                            fontWeight: 700, 
+                            fontSize: '10px', 
+                            height: 20, 
+                            bgcolor: 'primary.light', 
+                            color: 'primary.main',
+                            flexShrink: 0,
+                            ml: 1
+                          }} 
+                        />
+                      )}
+                    </Box>
+
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        height: 40, 
+                        fontSize: '13px', 
+                        lineHeight: 1.5,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {t.description}
+                    </Typography>
+
+                    {/* Metadata summary */}
+                    <Box sx={{ 
+                      bgcolor: '#f8fafc', 
+                      p: 2, 
+                      borderRadius: 2, 
+                      border: '1px dashed #e2e8f0',
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '4px',
-                        background: isCustom 
-                          ? 'linear-gradient(90deg, #64748b 0%, #475569 100%)' 
-                          : 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 100%)',
-                      },
-                      '&:hover': { 
-                        borderColor: isCustom ? 'text.secondary' : 'primary.main', 
-                        boxShadow: '0 12px 30px rgba(79, 70, 229, 0.12)', 
-                        transform: 'translateY(-6px)' 
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: 'secondary.main', lineHeight: 1.2 }}>
-                          {t.name}
+                      gap: 1
+                    }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" color="text.secondary">Orchestration:</Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                          {t.executionMode === 'sequential' ? 'Sequential Hub' : 'Parallel Map-Reduce'}
                         </Typography>
-                        {isCustom ? (
-                          <Chip 
-                            label="Custom" 
-                            size="small" 
-                            variant="outlined" 
-                            sx={{ 
-                              fontWeight: 700, 
-                              fontSize: '10px', 
-                              height: 20, 
-                              color: 'text.secondary', 
-                              borderColor: 'divider' 
-                            }} 
-                          />
-                        ) : (
-                          <Chip 
-                            label="SAP Preset" 
-                            size="small" 
-                            sx={{ 
-                              fontWeight: 700, 
-                              fontSize: '10px', 
-                              height: 20, 
-                              bgcolor: 'primary.light', 
-                              color: 'primary.main' 
-                            }} 
-                          />
-                        )}
                       </Box>
-
-                      <Typography variant="body2" color="text.secondary" sx={{ minHeight: 40, fontSize: '13px', lineHeight: 1.5 }}>
-                        {t.description}
-                      </Typography>
-
-                      {/* Metadata summary */}
-                      <Box sx={{ 
-                        bgcolor: '#f8fafc', 
-                        p: 2, 
-                        borderRadius: 2, 
-                        border: '1px dashed #e2e8f0',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1
-                      }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption" color="text.secondary">Orchestration:</Typography>
-                          <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                            {t.executionMode === 'sequential' ? 'Sequential Hub' : 'Parallel Map-Reduce'}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption" color="text.secondary">Complexity:</Typography>
-                          <Typography variant="caption" sx={{ fontWeight: 600, textTransform: 'capitalize' }}>
-                            {t.complexityProfile.replace('_', ' ')}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption" color="text.secondary">Worker Agents:</Typography>
-                          <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                            {t.workers.length} agents
-                          </Typography>
-                        </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" color="text.secondary">Complexity:</Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 600, textTransform: 'capitalize' }}>
+                          {t.complexityProfile.replace('_', ' ')}
+                        </Typography>
                       </Box>
-
-                      {/* Tags */}
-                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto' }}>
-                        {t.tags.split(' ').map((tag, tIdx) => (
-                          <Chip key={tIdx} label={tag} size="small" sx={{ fontSize: '9px', height: 16 }} />
-                        ))}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" color="text.secondary">Worker Agents:</Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                          {t.workers.length} agents
+                        </Typography>
                       </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                    </Box>
+
+                    {/* Tags */}
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto', minHeight: 24, alignItems: 'center' }}>
+                      {t.tags.split(' ').map((tag, tIdx) => (
+                        <Chip key={tIdx} label={tag} size="small" sx={{ fontSize: '9px', height: 18 }} />
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
               );
             })}
-          </Grid>
+          </Box>
         </Box>
       ) : (
         /* Main Builder Full-Width Canvas */
