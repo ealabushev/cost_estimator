@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography,
-  Button, TextField, Stepper, Step, StepLabel, Card, CardContent,
+  Button, TextField, Stepper, Step, StepLabel, Card,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Chip, Alert, IconButton, Select, MenuItem, FormControl,
-  InputLabel, RadioGroup, FormControlLabel, Radio, CircularProgress,
+  RadioGroup, FormControlLabel, Radio, CircularProgress,
   Tooltip, Divider
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -580,8 +580,8 @@ export default function TelemetryImportModal({
               Template Metadata:
             </Typography>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <Box>
                 <TextField
                   label="Template Name"
                   fullWidth
@@ -589,8 +589,8 @@ export default function TelemetryImportModal({
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Box>
+              <Box>
                 <TextField
                   label="Project Identifier"
                   fullWidth
@@ -598,8 +598,8 @@ export default function TelemetryImportModal({
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                 />
-              </Grid>
-              <Grid item xs={12}>
+              </Box>
+              <Box sx={{ gridColumn: { xs: 'span 1', sm: 'span 2' } }}>
                 <TextField
                   label="Tags (space-separated)"
                   fullWidth
@@ -607,8 +607,8 @@ export default function TelemetryImportModal({
                   value={templateTags}
                   onChange={(e) => setTemplateTags(e.target.value)}
                 />
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </Box>
         )}
       </DialogContent>
