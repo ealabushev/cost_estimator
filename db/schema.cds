@@ -136,6 +136,14 @@ entity WorkflowConfigs : cuid, managed {
     // Tags for filtering
     tags                          : String(500);
     notes                         : LargeString;
+    // Template & Telemetry Origin
+    isTemplate                    : Boolean default false;      // Reusable template flag
+    isPreset                      : Boolean default false;      // Built-in preset flag
+    templateCategory              : String(50) default 'Custom';// 'SAP ERP', 'General', 'Telemetry Ingested'
+    telemetrySource               : String(100);                // 'opentelemetry_otlp', 'openinference', 'langsmith'
+    telemetryRunsCount            : Integer default 0;          // Number of runs analyzed
+    telemetryTotalSpans           : Integer default 0;          // Total spans processed
+    telemetryMetadata             : LargeString;                // JSON snapshot: raw stats, P50/P90 distributions
 }
 
 // --- Output / Results Entities ---

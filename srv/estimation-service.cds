@@ -51,6 +51,29 @@ service EstimationService @(path: '/api/v1/estimation') {
         driftReport : LargeString;  // JSON analysis report
     };
 
+    // Parse raw OpenTelemetry / OpenInference agent traces into a calibrated workflow template draft
+    action parseTelemetryTrace(
+        telemetryData : LargeString,
+        baselineType  : String // 'median_p50' or 'conservative_p90'
+    ) returns {
+        status        : String;
+        workflowDraft : LargeString; // JSON string of derived WorkflowConfig
+        summary       : LargeString; // JSON string of extraction metrics
+    };
+
+    // Persist a calibrated workflow template derived from OpenTelemetry traces into HANA
+    action createTemplateFromTelemetry(
+        name          : String,
+        project       : String,
+        description   : String,
+        telemetryData : LargeString,
+        baselineType  : String // 'median_p50' or 'conservative_p90'
+    ) returns {
+        templateId    : UUID;
+        status        : String;
+        message       : String;
+    };
+
     // Refresh pricing from SAP GenAI Hub supported provider APIs
     action refreshPricing(provider : String) returns Integer; // Count of updated models
 

@@ -1131,6 +1131,38 @@ flowchart LR
 4. **Scope**: Adjustment factors are **global** (shared across all users within a tenant), not per-user. This ensures organizational knowledge is pooled. Admins can reset factors via the Pricing Admin screen.
 5. **Storage**: Calibration data stored in the `CalibrationRuns` HANA table with full audit trail via `managed` aspect.
 
+### 9.4 OpenTelemetry & OpenInference Grounded Template Ingestion
+
+To solve the "cold start" hurdle where architects must manually configure 15+ mathematical parameters ($M, \bar{L}, P_{\text{tool}}, p_{\text{retry}}$), the estimator supports **automated reverse-engineering of workflow templates directly from runtime OpenTelemetry (OTel) traces**.
+
+```mermaid
+flowchart LR
+    Trace["Production OTel / OpenInference Traces"] --> Ingest["CAP Ingestion / Client Parser"]
+    Ingest --> DAG["DAG Span Reconstruction"]
+    DAG --> Infer["Empirical Param Derivation (M, L̄, P_tool, p_retry)"]
+    Infer --> Base["Baseline Selector (P50 Median vs P90 Conservative)"]
+    Base --> Tpl["Calibrated Template Workflow in SAP HANA"]
+    Tpl --> Canvas["Workflow Canvas & Live Simulation"]
+```
+
+1. **Standards Supported**:
+   * **OpenTelemetry GenAI Semantic Conventions (v1.26+)**: `gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.usage.cache_read_input_tokens`, `gen_ai.tool.name`.
+   * **OpenInference / Traceloop**: `openinference.span.kind` (`AGENT`, `CHAIN`, `TOOL`, `LLM`), `tool.name`, `tool.input`, `tool.output`, `langgraph.node`, `traceloop.entity.name`.
+   * **Formats**: Standard OTLP JSON (`ExportTraceServiceRequest`), flattened span arrays, and JSON Lines (`.jsonl`).
+2. **Reverse-Engineering Engine**:
+   * **Supervisor & Worker Detection**: Root spans map to the Coordinator/Supervisor; child agent subtrees map to Worker subgraphs. Model names are automatically matched to the registered `ModelPricing` catalog.
+   * **Execution Pattern Detection**: Concurrency is deduced from span timeline overlaps ($\Delta t_{\text{start}}$ and concurrent active intervals). Parallel fan-out maps to `parallel_map_reduce`; sequential handoffs map to `subagents_router`. Reflector nodes with critique loops are flagged (`isReflectorNode = true`).
+   * **Empirical Derivations**: Measures actual routing cycles ($M$), bound tool count ($T$), tool hops ($\bar{L}$), observation payload tokens ($P_{\text{tool}}$), retry rates ($p_{\text{retry}}$), and prompt cache hit rates.
+3. **Statistical Baselines**:
+   * **Median Baseline (P50)**: Uses the median $M, \bar{L}, P_{\text{tool}}$ for standard expected run cost estimation.
+   * **Conservative Budget Ceiling (P90)**: Uses 90th-percentile values for high-risk, fat-tailed budget requests to ensure governance approval.
+4. **CAP Backend Actions**:
+   * `parseTelemetryTrace(telemetryData, baselineType)`: Validates and derives the draft workflow and summary metrics.
+   * `createTemplateFromTelemetry(name, project, description, telemetryData, baselineType)`: Persists the calibrated template and worker records directly into SAP HANA Cloud.
+5. **Interactive UI Wizard**:
+   * Accessible via the **"Import from OTel Runs"** card in the Quick Start row and the **"Import OTel"** toolbar button.
+   * Provides drag-and-drop file upload, instant JSON validation, a 1-click **"Load Sample ERP Agent OTel Trace"** button, live topology inspection, and baseline tuning.
+
 ---
 
 ## 10. Error Handling & Edge Cases

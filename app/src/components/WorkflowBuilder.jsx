@@ -32,8 +32,10 @@ import TuneIcon from '@mui/icons-material/Tune';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import HelpOutlinedIcon from '@mui/icons-material/HelpOutlined';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 import ExecutiveDashboard from './ExecutiveDashboard';
+import TelemetryImportModal from './TelemetryImportModal';
 import { getProviderLabel, groupByProvider, sortByProviderAndModel } from '../utils/modelGrouping';
 
 // Provider Color Mappings for badges
@@ -275,6 +277,8 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   const [isTemplateSelected, setIsTemplateSelected] = useState(false);
   const [isSpecsExpanded, setIsSpecsExpanded] = useState(true);
   const [triggerAutoLayout, setTriggerAutoLayout] = useState(false);
+  const [customTemplates, setCustomTemplates] = useState([]);
+  const [isTelemetryModalOpen, setIsTelemetryModalOpen] = useState(false);
 
   // Form inputs representing the active WorkflowConfig
   const [name, setName] = useState('New Agentic Workflow');
@@ -430,6 +434,44 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       });
   }, []);
 
+  // Fetch saved custom templates from database
+  const fetchCustomTemplates = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/estimation/WorkflowConfigs?$filter=isTemplate eq true&$expand=workers');
+      if (res.ok) {
+        const data = await res.json();
+        const templates = (data.value || []).map(t => ({
+          ...t,
+          isCustomTemplate: true,
+          description: t.notes || `Custom template with ${t.workers?.length || 0} agents (${t.telemetrySource || 'manual'})`,
+          workers: (t.workers || []).map(w => ({
+            name: w.name,
+            model_ID: w.model_ID,
+            toolCount: w.toolCount,
+            taskType: w.taskType,
+            avgObservationTokens: w.avgObservationTokens,
+            basePromptTokens: w.basePromptTokens,
+            avgOutputTokensPerHop: w.avgOutputTokensPerHop,
+            retryProbability: w.retryProbability,
+            executionMode: w.executionMode,
+            parallelInstances: w.parallelInstances,
+            isReflectorNode: w.isReflectorNode,
+            refinementIterations: w.refinementIterations,
+            avgToolHops: w.avgToolHops,
+            useCustomToolHops: w.useCustomToolHops
+          }))
+        }));
+        setCustomTemplates(templates);
+      }
+    } catch (err) {
+      console.warn("Could not load custom templates:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCustomTemplates();
+  }, [fetchCustomTemplates]);
+
   const toggleModelProvider = useCallback((provider) => {
     setCollapsedModelProviders(prev => {
       const next = new Set(prev);
@@ -499,17 +541,18 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
   // Handle template selection
   const handleApplyTemplate = (preset) => {
-    setName(preset.name);
-    setProject(preset.project);
-    setExecutionMode(preset.executionMode);
-    setStateMode(preset.stateMode);
-    setComplexityProfile(preset.complexityProfile);
-    setExpectedRoutingCycles(preset.expectedRoutingCycles);
-    setUseCustomRoutingCycles(preset.useCustomRoutingCycles);
-    setPromptCachingEnabled(preset.promptCachingEnabled);
-    setEstimatedCacheHitRate(preset.estimatedCacheHitRate);
-    setMonthlyRunVolume(preset.monthlyRunVolume);
-    setTags(preset.tags);
+    setName(preset.name || 'Calibrated Workflow');
+    setProject(preset.project || 'Default Project');
+    setExecutionMode(preset.executionMode || 'sequential');
+    setStateMode(preset.stateMode || 'scoped_subgraph');
+    setComplexityProfile(preset.complexityProfile || 'standard');
+    setExpectedRoutingCycles(preset.expectedRoutingCycles || 4);
+    setUseCustomRoutingCycles(preset.useCustomRoutingCycles !== undefined ? preset.useCustomRoutingCycles : true);
+    setPromptCachingEnabled(preset.promptCachingEnabled !== undefined ? preset.promptCachingEnabled : true);
+    setEstimatedCacheHitRate(preset.estimatedCacheHitRate || 0.50);
+    setMonthlyRunVolume(preset.monthlyRunVolume || 10000);
+    setTags(preset.tags || 'erp');
+    if (preset.notes) setNotes(preset.notes);
 
     // Map worker models based on fetched model list
     if (models.length > 0) {
@@ -518,34 +561,43 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       const sonnet = models.find(m => m.modelName.includes('claude-3-5-sonnet'));
 
       // Set supervisor model matching template specs
-      if (preset.name.includes('Intercompany')) {
+      if (preset.supervisorModel_ID) {
+        setSupervisorModelId(preset.supervisorModel_ID);
+      } else if (preset.name.includes('Intercompany')) {
         setSupervisorModelId(sonnet ? sonnet.ID : models[0].ID);
       } else {
         setSupervisorModelId(gpt4o ? gpt4o.ID : models[0].ID);
       }
 
-      setSynthesizerModelId(mini ? mini.ID : models[0].ID);
+      if (preset.synthesizerModel_ID) {
+        setSynthesizerModelId(preset.synthesizerModel_ID);
+      } else {
+        setSynthesizerModelId(mini ? mini.ID : models[0].ID);
+      }
 
-      const mappedWorkers = preset.workers.map((w, idx) => {
-        let selectedModelId = mini ? mini.ID : models[0].ID;
-        if (w.name.includes('Validator') || w.name.includes('Specialist') || w.name.includes('Matching')) {
-          selectedModelId = sonnet ? sonnet.ID : (gpt4o ? gpt4o.ID : models[0].ID);
+      const mappedWorkers = (preset.workers || []).map((w, idx) => {
+        let selectedModelId = w.model_ID;
+        if (!selectedModelId) {
+          selectedModelId = mini ? mini.ID : models[0].ID;
+          if (w.name.includes('Validator') || w.name.includes('Specialist') || w.name.includes('Matching')) {
+            selectedModelId = sonnet ? sonnet.ID : (gpt4o ? gpt4o.ID : models[0].ID);
+          }
         }
         return {
           ID: `w-${idx}`,
           name: w.name,
           model_ID: selectedModelId,
           toolCount: w.toolCount,
-          taskType: w.taskType,
+          taskType: w.taskType || 'analysis',
           avgObservationTokens: w.avgObservationTokens || 1000,
           basePromptTokens: w.basePromptTokens || 400,
           avgOutputTokensPerHop: w.avgOutputTokensPerHop || 300,
-          useCustomToolHops: w.useCustomToolHops || false,
+          useCustomToolHops: w.useCustomToolHops !== undefined ? w.useCustomToolHops : false,
           avgToolHops: w.avgToolHops || 2,
           retryProbability: w.retryProbability || 0.10,
           executionMode: w.executionMode || 'sequential',
           parallelInstances: w.parallelInstances || 1,
-          isReflectorNode: w.isReflectorNode || false,
+          isReflectorNode: Boolean(w.isReflectorNode),
           refinementIterations: w.refinementIterations || 1
         };
       });
@@ -1064,6 +1116,210 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, 
             gap: 3 
           }}>
+            {/* OpenTelemetry Ingestion Hero Card */}
+            <Card 
+              onClick={() => setIsTelemetryModalOpen(true)}
+              sx={{ 
+                cursor: 'pointer', 
+                height: 300,
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                border: '2px dashed',
+                borderColor: 'primary.main',
+                position: 'relative',
+                overflow: 'hidden',
+                bgcolor: '#f5f3ff',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '4px',
+                  background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 100%)',
+                },
+                '&:hover': { 
+                  boxShadow: '0 14px 32px rgba(79, 70, 229, 0.2)', 
+                  transform: 'translateY(-6px)',
+                  bgcolor: '#ede9fe'
+                }
+              }}
+            >
+              <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CloudUploadIcon sx={{ color: 'primary.main', fontSize: 24 }} />
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.2, fontSize: '1rem' }}>
+                      Import from OTel Runs
+                    </Typography>
+                  </Box>
+                  <Chip 
+                    label="Auto-Detect" 
+                    size="small" 
+                    color="primary" 
+                    sx={{ 
+                      fontWeight: 700, 
+                      fontSize: '10px', 
+                      height: 20, 
+                      flexShrink: 0
+                    }} 
+                  />
+                </Box>
+
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  sx={{ 
+                    fontSize: '13px', 
+                    lineHeight: 1.5
+                  }}
+                >
+                  Upload OpenTelemetry or OpenInference runtime traces from real agent runs. Automatically reconstructs the agent topology, routing cycles (M), and tool hops (L̄).
+                </Typography>
+
+                <Box sx={{ 
+                  bgcolor: 'rgba(255, 255, 255, 0.85)', 
+                  p: 2, 
+                  borderRadius: 1.5, 
+                  border: '1px solid', 
+                  borderColor: 'rgba(79, 70, 229, 0.2)',
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: 0.8, 
+                  mt: 'auto' 
+                }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Formats:</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>OTLP JSON · OpenInference</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Baselines:</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>P50 Median · P90 Ceiling</Typography>
+                  </Box>
+                </Box>
+
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AutoAwesomeIcon />}
+                  sx={{ mt: 1, fontWeight: 700, borderRadius: 2 }}
+                >
+                  Import Telemetry Trace
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Custom Saved Templates from Database */}
+            {customTemplates.map((t, idx) => (
+              <Card 
+                key={`custom-tpl-${idx}`}
+                onClick={() => handleApplyTemplate(t)}
+                sx={{ 
+                  cursor: 'pointer', 
+                  height: 300,
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  border: '1px solid',
+                  borderColor: 'primary.light',
+                  bgcolor: '#ffffff',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '4px',
+                    background: 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)',
+                  },
+                  '&:hover': { 
+                    borderColor: 'primary.main', 
+                    boxShadow: '0 12px 30px rgba(16, 185, 129, 0.15)', 
+                    transform: 'translateY(-6px)' 
+                  }
+                }}
+              >
+                <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 48 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'secondary.main', lineHeight: 1.2, fontSize: '1rem' }}>
+                      {t.name}
+                    </Typography>
+                    <Chip 
+                      label={t.telemetryRunsCount ? `OTel (${t.telemetryRunsCount} runs)` : "Custom Template"} 
+                      size="small" 
+                      color="success"
+                      sx={{ 
+                        fontWeight: 700, 
+                        fontSize: '10px', 
+                        height: 20, 
+                        flexShrink: 0,
+                        ml: 1
+                      }} 
+                    />
+                  </Box>
+
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      height: 40, 
+                      fontSize: '13px', 
+                      lineHeight: 1.5,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
+                    {t.description || t.notes || 'Calibrated workflow template.'}
+                  </Typography>
+
+                  <Box sx={{ 
+                    bgcolor: '#f8fafc', 
+                    p: 2, 
+                    borderRadius: 2, 
+                    border: '1px dashed #e2e8f0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1
+                  }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="caption" color="text.secondary">Orchestration:</Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                        {t.executionMode === 'sequential' ? 'Sequential Hub' : 'Parallel Map-Reduce'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="caption" color="text.secondary">Complexity:</Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 600, textTransform: 'capitalize' }}>
+                        {(t.complexityProfile || 'standard').replace('_', ' ')}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="caption" color="text.secondary">Worker Agents:</Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                        {t.workers?.length || 0} agents
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto', minHeight: 24, alignItems: 'center' }}>
+                    {(t.tags || 'custom').split(' ').map((tag, tIdx) => (
+                      <Chip key={tIdx} label={tag} size="small" sx={{ fontSize: '9px', height: 18 }} />
+                    ))}
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+
             {TEMPLATE_PRESETS.map((t, idx) => {
               const isCustom = t.name === 'Custom Workflow';
               return (
@@ -1346,6 +1602,22 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                   }}
                 >
                   {isSpecsExpanded ? 'Hide Specs' : 'Show Specs'}
+                </Button>
+                <Divider orientation="vertical" flexItem sx={{ my: 0.5 }} />
+                <Button 
+                  size="small" 
+                  startIcon={<CloudUploadIcon />} 
+                  variant="text" 
+                  onClick={() => setIsTelemetryModalOpen(true)}
+                  sx={{ 
+                    color: 'primary.main', 
+                    textTransform: 'none', 
+                    fontWeight: 600, 
+                    fontSize: 12,
+                    '&:hover': { bgcolor: 'primary.light' }
+                  }}
+                >
+                  Import OTel
                 </Button>
               </Box>
             </Box>
@@ -1820,6 +2092,17 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           </Card>
         </Box>
       )}
+
+      {/* Telemetry Ingestion Modal */}
+      <TelemetryImportModal
+        open={isTelemetryModalOpen}
+        onClose={() => setIsTelemetryModalOpen(false)}
+        models={models}
+        onApplyTemplate={(draft) => handleApplyTemplate(draft)}
+        onTemplateSaved={() => {
+          fetchCustomTemplates();
+        }}
+      />
     </Box>
   );
 }

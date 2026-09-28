@@ -2,6 +2,7 @@ const cds = require('@sap/cds');
 const { executeHttpRequest } = require('@sap-cloud-sdk/http-client');
 const jStat = require('jstat');
 const ss = require('simple-statistics');
+const { normalizeTracePayload, parseSpansToWorkflow } = require('./telemetry-parser');
 
 const AI_CORE_DESTINATION_NAME = process.env.AI_CORE_DESTINATION_NAME || 'AI_CORE_DESTINATION_HUB';
 const AI_CORE_RESOURCE_GROUP = process.env.AI_CORE_RESOURCE_GROUP || 'default';
@@ -561,6 +562,156 @@ module.exports = cds.service.impl(async function() {
         return {
             driftReport: JSON.stringify(report, null, 2)
         };
+    });
+
+    /**
+     * Helper to match detected model name string to registered ModelConfigs in database
+     */
+    function matchModel(modelName, dbModels) {
+        if (!dbModels || dbModels.length === 0) return null;
+        if (!modelName) return dbModels[0].ID;
+        const normalized = modelName.toLowerCase().replace(/[@:_].*$/, '').replace(/-\d{8}$/, '');
+        const exact = dbModels.find(m => m.modelName.toLowerCase() === modelName.toLowerCase());
+        if (exact) return exact.ID;
+        const sub = dbModels.find(m => m.modelName.toLowerCase().includes(normalized) || normalized.includes(m.modelName.toLowerCase()));
+        if (sub) return sub.ID;
+        if (normalized.includes('sonnet') || normalized.includes('claude')) {
+            const found = dbModels.find(m => m.modelName.includes('sonnet') || m.modelName.includes('claude'));
+            if (found) return found.ID;
+        }
+        if (normalized.includes('mini')) {
+            const found = dbModels.find(m => m.modelName.includes('mini'));
+            if (found) return found.ID;
+        }
+        if (normalized.includes('gpt-4') || normalized.includes('openai')) {
+            const found = dbModels.find(m => m.modelName.includes('gpt-4o') || m.modelName.includes('gpt-4'));
+            if (found) return found.ID;
+        }
+        return dbModels[0].ID;
+    }
+
+    /**
+     * ACTION: parseTelemetryTrace
+     * Analyzes raw OpenTelemetry/OpenInference trace and returns draft calibrated template workflow
+     */
+    this.on('parseTelemetryTrace', async (req) => {
+        const { telemetryData, baselineType } = req.data;
+        if (!telemetryData) return req.reject(400, 'telemetryData is required');
+
+        try {
+            const spans = normalizeTracePayload(telemetryData);
+            const parsed = parseSpansToWorkflow(spans, { baselineType: baselineType || 'median_p50' });
+
+            const dbModels = await SELECT.from(ModelConfigs);
+            const draft = parsed.workflowConfigDraft;
+
+            draft.supervisorModel_ID = matchModel(draft.supervisorModelName, dbModels);
+            if (draft.synthesizerModelName) {
+                draft.synthesizerModel_ID = matchModel(draft.synthesizerModelName, dbModels);
+            }
+
+            for (const w of draft.workers) {
+                w.model_ID = matchModel(w.modelName, dbModels);
+            }
+
+            return {
+                status: 'SUCCESS',
+                workflowDraft: JSON.stringify(draft),
+                summary: JSON.stringify(parsed.summary)
+            };
+        } catch (err) {
+            return req.reject(400, `Failed to parse telemetry: ${err.message}`);
+        }
+    });
+
+    /**
+     * ACTION: createTemplateFromTelemetry
+     * Directly parses telemetry trace and persists as a reusable custom template in HANA
+     */
+    this.on('createTemplateFromTelemetry', async (req) => {
+        const { name, project, description, telemetryData, baselineType } = req.data;
+        if (!telemetryData) return req.reject(400, 'telemetryData is required');
+
+        try {
+            const spans = normalizeTracePayload(telemetryData);
+            const parsed = parseSpansToWorkflow(spans, {
+                name,
+                project,
+                baselineType: baselineType || 'median_p50'
+            });
+
+            const dbModels = await SELECT.from(ModelConfigs);
+            const draft = parsed.workflowConfigDraft;
+            const supModelId = matchModel(draft.supervisorModelName, dbModels);
+            const synthModelId = draft.executionMode === 'parallel_map_reduce'
+                ? matchModel(draft.synthesizerModelName, dbModels)
+                : null;
+
+            const templateId = cds.utils.uuid();
+
+            // Insert WorkflowConfigs template record
+            await INSERT.into(WorkflowConfigs).entries({
+                ID: templateId,
+                name: name || draft.name,
+                project: project || draft.project,
+                notes: description || `Created from OpenTelemetry trace logs (${parsed.summary.runsAnalyzed} runs analyzed)`,
+                orchestrationPattern: draft.orchestrationPattern || 'subagents_router',
+                executionMode: draft.executionMode || 'sequential',
+                stateMode: draft.stateMode || 'scoped_subgraph',
+                complexityProfile: draft.complexityProfile || 'standard',
+                expectedRoutingCycles: draft.expectedRoutingCycles,
+                useCustomRoutingCycles: true,
+                supervisorModel_ID: supModelId,
+                synthesizerModel_ID: synthModelId,
+                supervisorSystemPromptTokens: 500,
+                workerRegistryTokens: 200,
+                avgToolSchemaTokens: 250,
+                promptCachingEnabled: Boolean(draft.promptCachingEnabled),
+                estimatedCacheHitRate: draft.estimatedCacheHitRate || 0.0,
+                monthlyRunVolume: draft.monthlyRunVolume || 10000,
+                tags: draft.tags || 'otel-imported',
+                isTemplate: true,
+                isPreset: false,
+                templateCategory: 'Telemetry Ingested',
+                telemetrySource: 'opentelemetry_otlp',
+                telemetryRunsCount: parsed.summary.runsAnalyzed || 1,
+                telemetryTotalSpans: parsed.summary.totalSpans || spans.length,
+                telemetryMetadata: JSON.stringify(draft.telemetryMetadata)
+            });
+
+            // Insert WorkerConfigs records
+            for (let i = 0; i < draft.workers.length; i++) {
+                const w = draft.workers[i];
+                const workerModelId = matchModel(w.modelName, dbModels);
+                await INSERT.into(WorkerConfigs).entries({
+                    ID: cds.utils.uuid(),
+                    workflow_ID: templateId,
+                    name: w.name,
+                    roleDescription: `Agent extracted from OTel spans with ${w.toolCount} tools`,
+                    model_ID: workerModelId,
+                    toolCount: parseInt(w.toolCount) || 1,
+                    taskType: w.taskType || 'analysis',
+                    avgToolHops: parseFloat(w.avgToolHops) || 1.0,
+                    useCustomToolHops: true,
+                    avgObservationTokens: parseInt(w.avgObservationTokens) || 1000,
+                    basePromptTokens: parseInt(w.basePromptTokens) || 400,
+                    avgOutputTokensPerHop: parseInt(w.avgOutputTokensPerHop) || 300,
+                    retryProbability: parseFloat(w.retryProbability) || 0.05,
+                    executionMode: w.executionMode || 'sequential',
+                    parallelInstances: parseInt(w.parallelInstances) || 1,
+                    isReflectorNode: Boolean(w.isReflectorNode),
+                    refinementIterations: parseInt(w.refinementIterations) || 1
+                });
+            }
+
+            return {
+                templateId,
+                status: 'SUCCESS',
+                message: `Template '${name || draft.name}' created with ${draft.workers.length} workers from ${parsed.summary.runsAnalyzed} telemetry run(s).`
+            };
+        } catch (err) {
+            return req.reject(400, `Failed to create template from telemetry: ${err.message}`);
+        }
     });
 
     async function removeSeedModelData(entities) {
