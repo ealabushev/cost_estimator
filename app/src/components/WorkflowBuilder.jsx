@@ -37,6 +37,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import ExecutiveDashboard from './ExecutiveDashboard';
 import TelemetryImportModal from './TelemetryImportModal';
 import { getProviderLabel, groupByProvider, sortByProviderAndModel } from '../utils/modelGrouping';
+import { matchModelToCatalog } from '../utils/telemetryParser';
 
 // Provider Color Mappings for badges
 const PROVIDER_COLORS = {
@@ -553,6 +554,9 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     setMonthlyRunVolume(preset.monthlyRunVolume || 10000);
     setTags(preset.tags || 'erp');
     if (preset.notes) setNotes(preset.notes);
+    if (preset.supervisorSystemPromptTokens) {
+      setSupervisorSystemPromptTokens(preset.supervisorSystemPromptTokens);
+    }
 
     // Map worker models based on fetched model list
     if (models.length > 0) {
@@ -563,6 +567,9 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       // Set supervisor model matching template specs
       if (preset.supervisorModel_ID) {
         setSupervisorModelId(preset.supervisorModel_ID);
+      } else if (preset.supervisorModelName) {
+        const matched = matchModelToCatalog(preset.supervisorModelName, models);
+        setSupervisorModelId(matched?.ID || models[0].ID);
       } else if (preset.name.includes('Intercompany')) {
         setSupervisorModelId(sonnet ? sonnet.ID : models[0].ID);
       } else {
@@ -571,12 +578,19 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
       if (preset.synthesizerModel_ID) {
         setSynthesizerModelId(preset.synthesizerModel_ID);
+      } else if (preset.synthesizerModelName) {
+        const matched = matchModelToCatalog(preset.synthesizerModelName, models);
+        setSynthesizerModelId(matched?.ID || models[0].ID);
       } else {
         setSynthesizerModelId(mini ? mini.ID : models[0].ID);
       }
 
       const mappedWorkers = (preset.workers || []).map((w, idx) => {
         let selectedModelId = w.model_ID;
+        if (!selectedModelId && w.modelName) {
+          const matched = matchModelToCatalog(w.modelName, models);
+          selectedModelId = matched?.ID;
+        }
         if (!selectedModelId) {
           selectedModelId = mini ? mini.ID : models[0].ID;
           if (w.name.includes('Validator') || w.name.includes('Specialist') || w.name.includes('Matching')) {

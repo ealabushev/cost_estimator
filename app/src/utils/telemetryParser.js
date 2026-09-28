@@ -334,6 +334,7 @@ export function parseSpansToWorkflow(spans, options = {}) {
 
   const runStats = [];
   const allSupervisorModels = [];
+  const allSupervisorPromptTokens = [];
   const discoveredWorkersMap = new Map();
   let totalCacheReadTokens = 0;
   let totalInputTokensAcrossAll = 0;
@@ -363,9 +364,15 @@ export function parseSpansToWorkflow(spans, options = {}) {
 
     let supervisorModel = null;
     for (const s of traceSpans) {
-      if ((s.name.includes('router') || s.lgNode === 'router' || s.spanKind === 'SUPERVISOR') && s.modelName) {
-        supervisorModel = s.modelName;
-        break;
+      const isRouterOrSupervisor = s.name.includes('router') || s.lgNode === 'router' || s.spanKind === 'SUPERVISOR';
+      if (isRouterOrSupervisor) {
+        if (s.modelName && !supervisorModel) supervisorModel = s.modelName;
+        if (s.inputTokens > 0) allSupervisorPromptTokens.push(s.inputTokens);
+        const rChildren = childrenMap.get(s.spanId) || [];
+        for (const rc of rChildren) {
+          if (rc.modelName && !supervisorModel) supervisorModel = rc.modelName;
+          if (rc.inputTokens > 0) allSupervisorPromptTokens.push(rc.inputTokens);
+        }
       }
     }
     if (!supervisorModel) {
@@ -474,6 +481,10 @@ export function parseSpansToWorkflow(spans, options = {}) {
   const chosenCycles = baselineType === 'conservative_p90' ? routingCyclesDist.p90 : routingCyclesDist.p50;
 
   const supervisorModelName = getDominantItem(allSupervisorModels) || 'gpt-4o';
+  const supervisorPromptDist = calculatePercentiles(allSupervisorPromptTokens);
+  const chosenSupervisorPrompt = baselineType === 'conservative_p90' 
+    ? (supervisorPromptDist.p90 || 500) 
+    : (supervisorPromptDist.p50 || 500);
 
   const derivedWorkers = [];
   for (const [wName, wData] of discoveredWorkersMap.entries()) {
@@ -507,9 +518,9 @@ export function parseSpansToWorkflow(spans, options = {}) {
       toolsDiscovered: toolArray,
       avgToolHops: chosenHops || 1.0,
       useCustomToolHops: true,
-      avgObservationTokens: chosenObs || 1000,
-      basePromptTokens: chosenPrompt || 400,
-      avgOutputTokensPerHop: chosenOut || 300,
+      avgObservationTokens: Math.round(chosenObs || 1000),
+      basePromptTokens: Math.round(chosenPrompt || 400),
+      avgOutputTokensPerHop: Math.round(chosenOut || 300),
       retryProbability: retryProb,
       executionMode: hasParallelExecutions ? 'parallel_map_reduce' : 'sequential',
       parallelInstances: hasParallelExecutions ? 2 : 1,
@@ -556,6 +567,7 @@ export function parseSpansToWorkflow(spans, options = {}) {
     expectedRoutingCycles: chosenCycles || 3.0,
     useCustomRoutingCycles: true,
     supervisorModelName,
+    supervisorSystemPromptTokens: Math.round(chosenSupervisorPrompt),
     synthesizerModelName: executionMode === 'parallel_map_reduce' ? 'gpt-4o-mini' : null,
     promptCachingEnabled: cacheHitRate > 0.05,
     estimatedCacheHitRate: cacheHitRate,
@@ -568,6 +580,7 @@ export function parseSpansToWorkflow(spans, options = {}) {
       totalSpansProcessed: spans.length,
       baselineType,
       routingCyclesStats: routingCyclesDist,
+      supervisorPromptTokens: Math.round(chosenSupervisorPrompt),
       detectedConcurrency: hasParallelExecutions,
       overallCacheHitRate: cacheHitRate,
       ingestedAt: new Date().toISOString()
@@ -580,6 +593,7 @@ export function parseSpansToWorkflow(spans, options = {}) {
       runsAnalyzed: tracesMap.size,
       totalSpans: spans.length,
       supervisorModel: supervisorModelName,
+      supervisorPromptTokens: Math.round(chosenSupervisorPrompt),
       workerCount: derivedWorkers.length,
       executionMode,
       complexityProfile,
@@ -721,3 +735,119 @@ export const SAMPLE_ERP_OTEL_TRACE = {
     }
   ]
 };
+
+/**
+ * Extracts normalized semantic features (family, tier, version) from raw model names
+ * e.g. "anthropic.claude-sonnet-4-5-20250929-v1:0" -> family: 'claude', tier: 'sonnet', version: 4.5
+ */
+export function extractModelFeatures(nameStr) {
+  if (!nameStr) return { raw: '', family: '', tier: '', version: null };
+  const raw = String(nameStr).toLowerCase().trim();
+
+  let family = '';
+  if (/anthropic|claude/i.test(raw)) family = 'claude';
+  else if (/gpt|openai|\bo1\b|\bo3\b/i.test(raw)) family = 'openai';
+  else if (/gemini|google/i.test(raw)) family = 'gemini';
+  else if (/mistral|codestral/i.test(raw)) family = 'mistral';
+  else if (/llama|meta/i.test(raw)) family = 'llama';
+  else if (/amazon|titan/i.test(raw)) family = 'amazon';
+
+  let tier = '';
+  if (family === 'claude') {
+    if (/sonnet/i.test(raw)) tier = 'sonnet';
+    else if (/haiku/i.test(raw)) tier = 'haiku';
+    else if (/opus/i.test(raw)) tier = 'opus';
+  } else if (family === 'openai') {
+    if (/4o[-_]?mini/i.test(raw)) tier = '4o-mini';
+    else if (/4o\b/i.test(raw)) tier = '4o';
+    else if (/o3[-_]?mini/i.test(raw)) tier = 'o3-mini';
+    else if (/o1[-_]?mini/i.test(raw)) tier = 'o1-mini';
+    else if (/\bo1\b/i.test(raw)) tier = 'o1';
+    else if (/turbo/i.test(raw)) tier = 'turbo';
+    else if (/3\.?5|35/i.test(raw)) tier = 'gpt-3.5';
+    else if (/gpt-?4\b/i.test(raw)) tier = 'gpt-4';
+  } else if (family === 'gemini') {
+    if (/flash/i.test(raw)) tier = 'flash';
+    else if (/pro/i.test(raw)) tier = 'pro';
+    else if (/ultra/i.test(raw)) tier = 'ultra';
+  } else if (family === 'mistral') {
+    if (/large/i.test(raw)) tier = 'large';
+    else if (/small|nemo/i.test(raw)) tier = 'small';
+    else if (/codestral/i.test(raw)) tier = 'codestral';
+  } else if (family === 'llama') {
+    if (/405b/i.test(raw)) tier = '405b';
+    else if (/70b/i.test(raw)) tier = '70b';
+    else if (/8b/i.test(raw)) tier = '8b';
+  }
+
+  let version = null;
+  const vMatch = raw.match(/(?:claude[-.\s]*|gemini[-.\s]*|llama[-.\s]*|gpt[-.\s]*)?(\d+)[-.](\d+)/i);
+  if (vMatch) {
+    version = parseFloat(vMatch[1] + '.' + vMatch[2]);
+  } else {
+    const intMatch = raw.match(/(?:claude[-.\s]*|gemini[-.\s]*|llama[-.\s]*|gpt[-.\s]*)(\d+)/i);
+    if (intMatch) version = parseFloat(intMatch[1]);
+  }
+
+  return { raw, family, tier, version };
+}
+
+/**
+ * Intelligent pattern matching algorithm that correlates complex APM / trace model identifiers
+ * (e.g. "anthropic.claude-sonnet-4-5-20250929-v1:0") to catalog models in SAP AI Core / BTP.
+ */
+export function matchModelToCatalog(rawName, candidateModels) {
+  if (!candidateModels || candidateModels.length === 0) return null;
+  if (!rawName) return candidateModels[0];
+
+  const rawFeat = extractModelFeatures(rawName);
+  let bestScore = -9999;
+  let bestCandidate = null;
+
+  for (const cand of candidateModels) {
+    const candName = cand.modelName || cand.name || cand.ID || '';
+    if (candName.toLowerCase() === rawName.toLowerCase()) {
+      return cand;
+    }
+
+    const candFeat = extractModelFeatures(candName);
+
+    // Strict tier mismatch: sonnet must NEVER match haiku or opus, flash must never match pro
+    if (rawFeat.tier && candFeat.tier && rawFeat.tier !== candFeat.tier) {
+      continue;
+    }
+
+    let score = 0;
+
+    // 1. Family match (e.g. claude vs claude, openai vs openai)
+    if (rawFeat.family && candFeat.family && rawFeat.family === candFeat.family) {
+      score += 300;
+    } else if (rawFeat.family && candFeat.family && rawFeat.family !== candFeat.family) {
+      score -= 500;
+    }
+
+    // 2. Tier match (e.g. sonnet vs sonnet, 4o-mini vs 4o-mini)
+    if (rawFeat.tier && candFeat.tier && rawFeat.tier === candFeat.tier) {
+      score += 500;
+    }
+
+    // 3. Version proximity (e.g. 4.5 prefers 3.5 over 3.0)
+    if (rawFeat.version !== null && candFeat.version !== null) {
+      const diff = Math.abs(rawFeat.version - candFeat.version);
+      score += Math.max(0, 150 - diff * 50);
+    }
+
+    // 4. Substring presence
+    const cLow = candName.toLowerCase();
+    const rLow = rawName.toLowerCase();
+    if (rawFeat.tier && cLow.includes(rawFeat.tier)) score += 100;
+    if (cLow.includes(rLow) || rLow.includes(cLow)) score += 200;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestCandidate = cand;
+    }
+  }
+
+  return (bestScore > 50 && bestCandidate) ? bestCandidate : candidateModels[0];
+}

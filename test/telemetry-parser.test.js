@@ -93,4 +93,31 @@ assert.strictEqual(otlpResult.workflowConfigDraft.workers[0].name, 'Sql Analyst'
 assert.strictEqual(otlpResult.workflowConfigDraft.workers[0].toolCount, 1);
 console.log('  ✅ OTLP trace parsing passed successfully.');
 
+// 3. Test Intelligent Pattern Matching against BTP catalog
+console.log('\nTest 3: Testing Model Pattern Matching (Sonnet 4.5 vs BTP Catalog)...');
+const { matchModelToCatalog } = require('../srv/telemetry-parser');
+
+const btpCatalog = [
+  { ID: 'mod-haiku', modelName: 'anthropic--claude-3-haiku', provider: 'anthropic' },
+  { ID: 'mod-sonnet-35', modelName: 'Claude 3.5 Sonnet', provider: 'anthropic' },
+  { ID: 'mod-gpt4o', modelName: 'gpt-4o', provider: 'openai' },
+  { ID: 'mod-mini', modelName: 'gpt-4o-mini', provider: 'openai' }
+];
+
+// Test the user's specific case:
+const matchedSonnet = matchModelToCatalog('anthropic.claude-sonnet-4-5-20250929-v1:0', btpCatalog);
+assert.strictEqual(matchedSonnet.ID, 'mod-sonnet-35', 'Should match Claude 3.5 Sonnet and NOT Claude 3 Haiku');
+console.log(`  ✅ "anthropic.claude-sonnet-4-5-20250929-v1:0" matched "${matchedSonnet.modelName}" (${matchedSonnet.ID})`);
+
+// Test Haiku trace
+const matchedHaiku = matchModelToCatalog('anthropic.claude-3-haiku-20240307-v1:0', btpCatalog);
+assert.strictEqual(matchedHaiku.ID, 'mod-haiku', 'Should match Claude 3 Haiku when Haiku is in trace');
+console.log(`  ✅ "anthropic.claude-3-haiku-20240307-v1:0" matched "${matchedHaiku.modelName}"`);
+
+// Test GPT-4o-mini trace vs GPT-4o
+const matchedMini = matchModelToCatalog('gpt-4o-mini-2024-07-18', btpCatalog);
+assert.strictEqual(matchedMini.ID, 'mod-mini', 'Should match gpt-4o-mini and NOT gpt-4o');
+console.log(`  ✅ "gpt-4o-mini-2024-07-18" matched "${matchedMini.modelName}"`);
+
 console.log('\n🎉 All Telemetry Parser tests passed!');
+

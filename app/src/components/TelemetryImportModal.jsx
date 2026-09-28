@@ -19,6 +19,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import {
   normalizeTracePayload,
   parseSpansToWorkflow,
+  matchModelToCatalog,
   SAMPLE_ERP_OTEL_TRACE
 } from '../utils/telemetryParser';
 
@@ -71,22 +72,17 @@ export default function TelemetryImportModal({
       // Match models against available models in system
       const draft = result.workflowConfigDraft;
       if (models.length > 0) {
-        const findModelId = (name) => {
-          if (!name) return models[0]?.ID;
-          const clean = name.toLowerCase().replace(/[@:_].*$/, '').replace(/-\d{8}$/, '');
-          const exact = models.find(m => m.modelName.toLowerCase() === name.toLowerCase());
-          if (exact) return exact.ID;
-          const partial = models.find(m => m.modelName.toLowerCase().includes(clean) || clean.includes(m.modelName.toLowerCase()));
-          if (partial) return partial.ID;
-          return models[0]?.ID;
-        };
+        const supMatch = matchModelToCatalog(draft.supervisorModelName, models);
+        draft.supervisorModel_ID = supMatch ? supMatch.ID : models[0]?.ID;
 
-        draft.supervisorModel_ID = findModelId(draft.supervisorModelName);
         if (draft.synthesizerModelName) {
-          draft.synthesizerModel_ID = findModelId(draft.synthesizerModelName);
+          const synthMatch = matchModelToCatalog(draft.synthesizerModelName, models);
+          draft.synthesizerModel_ID = synthMatch ? synthMatch.ID : models[0]?.ID;
         }
+
         for (const w of draft.workers) {
-          w.model_ID = findModelId(w.modelName);
+          const workerMatch = matchModelToCatalog(w.modelName, models);
+          w.model_ID = workerMatch ? workerMatch.ID : models[0]?.ID;
         }
       }
 
@@ -154,6 +150,18 @@ export default function TelemetryImportModal({
     if (rawText) {
       handleParse(rawText, newBaseline);
     }
+  };
+
+  // Override supervisor model in draft
+  const handleSupervisorModelChange = (modelId) => {
+    if (!parsedResult) return;
+    const updated = { ...parsedResult };
+    updated.workflowConfigDraft.supervisorModel_ID = modelId;
+    const mObj = models.find(m => m.ID === modelId);
+    if (mObj) {
+      updated.workflowConfigDraft.supervisorModelName = mObj.modelName;
+    }
+    setParsedResult(updated);
   };
 
   // Override worker model in draft
@@ -427,7 +435,7 @@ export default function TelemetryImportModal({
             </Box>
 
             {/* Supervisor Info Card */}
-            <Card sx={{ p: 2, bgcolor: '#ffffff', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Card sx={{ p: 2, bgcolor: '#ffffff', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <LayersIcon sx={{ color: 'primary.main' }} />
                 <Box>
@@ -435,18 +443,38 @@ export default function TelemetryImportModal({
                     Supervisor / Router Agent
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Detected Model from Root Span: <strong>{parsedResult.workflowConfigDraft.supervisorModelName}</strong>
+                    Detected in trace: <code style={{ fontSize: 11, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{parsedResult.workflowConfigDraft.supervisorModelName}</code>
+                    {' · '}
+                    Prompt: <strong>{parsedResult.workflowConfigDraft.supervisorSystemPromptTokens?.toLocaleString() || 500} tok</strong>
                   </Typography>
                 </Box>
               </Box>
-              <Chip 
-                label="Auto-Mapped" 
-                size="small" 
-                color="primary" 
-                variant="outlined" 
-                icon={<CheckCircleIcon />} 
-                sx={{ fontWeight: 600 }}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 280 }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                  BTP Model:
+                </Typography>
+                <FormControl size="small" fullWidth sx={{ minWidth: 180 }}>
+                  <Select
+                    value={parsedResult.workflowConfigDraft.supervisorModel_ID || models[0]?.ID || ''}
+                    onChange={(e) => handleSupervisorModelChange(e.target.value)}
+                    sx={{ fontSize: 13, height: 32, bgcolor: '#ffffff' }}
+                  >
+                    {models.map((m) => (
+                      <MenuItem key={m.ID} value={m.ID} sx={{ fontSize: 13 }}>
+                        {m.modelName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Chip 
+                  label="Matched" 
+                  size="small" 
+                  color="success" 
+                  variant="outlined" 
+                  icon={<CheckCircleIcon />} 
+                  sx={{ fontWeight: 600, height: 24, fontSize: 11 }}
+                />
+              </Box>
             </Card>
 
             {/* Discovered Workers Table */}
@@ -461,9 +489,11 @@ export default function TelemetryImportModal({
                     <TableCell sx={{ fontWeight: 700 }}>Agent Name</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Model Inferred</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Task Type</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Tools Bound (T)</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Avg Hops (L̄)</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Tools (T)</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Hops (L̄)</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Base Prompt (P_in)</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Obs. Tokens (P_tool)</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Out / Hop (P_out)</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Retry Rate</TableCell>
                   </TableRow>
                 </TableHead>
@@ -501,7 +531,9 @@ export default function TelemetryImportModal({
                         </Tooltip>
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>{w.avgToolHops}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{w.basePromptTokens.toLocaleString()} tok</TableCell>
                       <TableCell>{w.avgObservationTokens.toLocaleString()} tok</TableCell>
+                      <TableCell>{w.avgOutputTokensPerHop.toLocaleString()} tok</TableCell>
                       <TableCell sx={{ color: w.retryProbability > 0.1 ? 'error.main' : 'text.primary' }}>
                         {Math.round(w.retryProbability * 100)}%
                       </TableCell>

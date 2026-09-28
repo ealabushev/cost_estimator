@@ -2,7 +2,7 @@ const cds = require('@sap/cds');
 const { executeHttpRequest } = require('@sap-cloud-sdk/http-client');
 const jStat = require('jstat');
 const ss = require('simple-statistics');
-const { normalizeTracePayload, parseSpansToWorkflow } = require('./telemetry-parser');
+const { normalizeTracePayload, parseSpansToWorkflow, matchModelToCatalog } = require('./telemetry-parser');
 
 const AI_CORE_DESTINATION_NAME = process.env.AI_CORE_DESTINATION_NAME || 'AI_CORE_DESTINATION_HUB';
 const AI_CORE_RESOURCE_GROUP = process.env.AI_CORE_RESOURCE_GROUP || 'default';
@@ -566,28 +566,13 @@ module.exports = cds.service.impl(async function() {
 
     /**
      * Helper to match detected model name string to registered ModelConfigs in database
+     * using semantic pattern matching (handles Bedrock, Vertex, Azure APM slugs).
      */
     function matchModel(modelName, dbModels) {
         if (!dbModels || dbModels.length === 0) return null;
         if (!modelName) return dbModels[0].ID;
-        const normalized = modelName.toLowerCase().replace(/[@:_].*$/, '').replace(/-\d{8}$/, '');
-        const exact = dbModels.find(m => m.modelName.toLowerCase() === modelName.toLowerCase());
-        if (exact) return exact.ID;
-        const sub = dbModels.find(m => m.modelName.toLowerCase().includes(normalized) || normalized.includes(m.modelName.toLowerCase()));
-        if (sub) return sub.ID;
-        if (normalized.includes('sonnet') || normalized.includes('claude')) {
-            const found = dbModels.find(m => m.modelName.includes('sonnet') || m.modelName.includes('claude'));
-            if (found) return found.ID;
-        }
-        if (normalized.includes('mini')) {
-            const found = dbModels.find(m => m.modelName.includes('mini'));
-            if (found) return found.ID;
-        }
-        if (normalized.includes('gpt-4') || normalized.includes('openai')) {
-            const found = dbModels.find(m => m.modelName.includes('gpt-4o') || m.modelName.includes('gpt-4'));
-            if (found) return found.ID;
-        }
-        return dbModels[0].ID;
+        const matched = matchModelToCatalog(modelName, dbModels);
+        return matched ? matched.ID : dbModels[0].ID;
     }
 
     /**
