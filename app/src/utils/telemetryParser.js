@@ -438,6 +438,7 @@ export function parseSpansToWorkflow(spans, options = {}) {
           toolsSet: new Set(),
           hopsList: [],
           observationTokensList: [],
+          initialPromptsList: [],
           promptTokensList: [],
           outputTokensList: [],
           errorsCount: 0,
@@ -456,14 +457,18 @@ export function parseSpansToWorkflow(spans, options = {}) {
         wEntry.toolsSet.add(ts.toolName);
         if (ts.isError) wEntry.errorsCount += 1;
 
-        let obsTokens = ts.outputTokens;
+        let obsTokens = ts.outputTokens || 0;
         if (!obsTokens && ts.toolOutput) {
           obsTokens = estimateTokensFromText(ts.toolOutput);
         }
-        if (obsTokens > 0) wEntry.observationTokensList.push(obsTokens);
+        wEntry.observationTokensList.push(obsTokens);
       }
 
       const llmSpans = wGroup.spans.filter(s => s.modelName || s.inputTokens > 0);
+      llmSpans.sort((a, b) => a.startTimeMs - b.startTimeMs);
+      if (llmSpans.length > 0 && llmSpans[0].inputTokens > 0) {
+        wEntry.initialPromptsList.push(llmSpans[0].inputTokens);
+      }
       for (const ls of llmSpans) {
         if (ls.modelName) wEntry.models.push(ls.modelName);
         if (ls.inputTokens > 0) wEntry.promptTokensList.push(ls.inputTokens);
@@ -492,12 +497,17 @@ export function parseSpansToWorkflow(spans, options = {}) {
   for (const [wName, wData] of discoveredWorkersMap.entries()) {
     const hopsDist = calculatePercentiles(wData.hopsList);
     const obsDist = calculatePercentiles(wData.observationTokensList);
+    const initialPromptDist = calculatePercentiles(wData.initialPromptsList.length > 0 ? wData.initialPromptsList : wData.promptTokensList);
     const promptDist = calculatePercentiles(wData.promptTokensList);
     const outDist = calculatePercentiles(wData.outputTokensList);
 
+    const meanObs = wData.observationTokensList.length > 0
+      ? Math.round(wData.observationTokensList.reduce((a, b) => a + b, 0) / wData.observationTokensList.length)
+      : 100;
+
     const chosenHops = baselineType === 'conservative_p90' ? hopsDist.p90 : hopsDist.p50;
-    const chosenObs = baselineType === 'conservative_p90' ? obsDist.p90 : obsDist.p50;
-    const chosenPrompt = baselineType === 'conservative_p90' ? promptDist.p90 : promptDist.p50;
+    const chosenObs = (baselineType === 'conservative_p90' ? obsDist.p90 : obsDist.p50) || meanObs || 100;
+    const chosenPrompt = baselineType === 'conservative_p90' ? initialPromptDist.p90 : initialPromptDist.p50;
     const chosenOut = baselineType === 'conservative_p90' ? outDist.p90 : outDist.p50;
 
     const totalToolCalls = wData.hopsList.reduce((a, b) => a + b, 0);
@@ -586,6 +596,7 @@ export function parseSpansToWorkflow(spans, options = {}) {
     useCustomRoutingCycles: true,
     supervisorModelName,
     supervisorSystemPromptTokens: Math.round(chosenSupervisorPrompt),
+    avgToolSchemaTokens: 0,
     synthesizerModelName: executionMode === 'parallel_map_reduce' ? 'gpt-4o-mini' : null,
     promptCachingEnabled: cacheHitRate > 0.05,
     estimatedCacheHitRate: cacheHitRate,

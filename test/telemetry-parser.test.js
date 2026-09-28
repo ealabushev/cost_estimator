@@ -28,7 +28,7 @@ if (fs.existsSync(samplePath)) {
   assert.deepStrictEqual(worker.toolsDiscovered, ['generate_csv', 'generate_chart', 'get_data']);
   assert.strictEqual(worker.avgToolHops, 9, 'Should detect 9 tool hops');
   assert.strictEqual(worker.retryProbability, 0.78, 'Should detect 78% retry rate from error spans');
-  assert(worker.basePromptTokens > 6000, 'Should detect empirical input token count');
+  assert.strictEqual(worker.basePromptTokens, 5253, 'Should detect true initial prompt tokens (5253)');
 
   console.log('  ✅ trace_sample.json parsed and validated successfully.');
   console.log(`     Supervisor: ${workflowConfigDraft.supervisorModelName}`);

@@ -953,7 +953,7 @@ function computeCycleCostAndTokens(params) {
     const obsTok = worker.avgObservationTokens || 1000;
 
     for (let hop = 1; hop <= L; hop++) {
-        const hopInTokRaw = basePrompt + toolSchemaTok + currentHistory + ((hop - 1) * obsTok);
+        const hopInTokRaw = basePrompt + toolSchemaTok + currentHistory;
         const hopCacheHitTok = Math.round(hopInTokRaw * cacheHitRate);
         const hopBillableInTok = hopInTokRaw - hopCacheHitTok;
         const hopOutTok = worker.avgOutputTokensPerHop !== undefined && worker.avgOutputTokensPerHop !== null ? Number(worker.avgOutputTokensPerHop) : 300;
@@ -970,7 +970,9 @@ function computeCycleCostAndTokens(params) {
         workerCycleOutTok += Math.round(hopOutTok * retryMultiplier);
         workerCycleThinkTok += Math.round(hopThinkTok * retryMultiplier);
 
-        currentHistory += Math.round((hopOutTok + obsTok) * 0.7);
+        // In tool calling, only the assistant tool call invocation (~150-300 tok) + tool observation append to state history
+        const stateAppendOutputTok = Math.min(300, hopOutTok);
+        currentHistory += Math.round((stateAppendOutputTok + obsTok) * 0.7);
         if (workflow.messageTrimmingEnabled && workflow.messageTrimmingMaxTokens) {
             currentHistory = Math.min(currentHistory, workflow.messageTrimmingMaxTokens);
         }
