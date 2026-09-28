@@ -280,6 +280,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   const [triggerAutoLayout, setTriggerAutoLayout] = useState(false);
   const [customTemplates, setCustomTemplates] = useState([]);
   const [isTelemetryModalOpen, setIsTelemetryModalOpen] = useState(false);
+  const [activeTelemetryBenchmark, setActiveTelemetryBenchmark] = useState(null);
 
   // Form inputs representing the active WorkflowConfig
   const [name, setName] = useState('New Agentic Workflow');
@@ -557,6 +558,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     if (preset.supervisorSystemPromptTokens) {
       setSupervisorSystemPromptTokens(preset.supervisorSystemPromptTokens);
     }
+    setActiveTelemetryBenchmark(preset.telemetryMetadata || null);
 
     // Map worker models based on fetched model list
     if (models.length > 0) {
@@ -607,8 +609,8 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           basePromptTokens: w.basePromptTokens || 400,
           avgOutputTokensPerHop: w.avgOutputTokensPerHop || 300,
           useCustomToolHops: w.useCustomToolHops !== undefined ? w.useCustomToolHops : false,
-          avgToolHops: w.avgToolHops || 2,
-          retryProbability: w.retryProbability || 0.10,
+          avgToolHops: w.avgToolHops !== undefined ? w.avgToolHops : 2,
+          retryProbability: w.retryProbability !== undefined ? w.retryProbability : 0.10,
           executionMode: w.executionMode || 'sequential',
           parallelInstances: w.parallelInstances || 1,
           isReflectorNode: Boolean(w.isReflectorNode),
@@ -1545,6 +1547,37 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                 </Box>
               </Box>
             </Box>
+
+            {/* Telemetry Ground Truth Sanity Check Banner */}
+            {activeTelemetryBenchmark && (
+              <Box sx={{ 
+                px: 2.5, 
+                py: 0.75, 
+                bgcolor: '#f0fdf4', 
+                borderBottom: '1px solid #bbf7d0', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                zIndex: 5,
+                flexWrap: 'wrap',
+                gap: 1
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip 
+                    label="OTel Ground Truth" 
+                    size="small" 
+                    color="success" 
+                    sx={{ height: 20, fontSize: 10, fontWeight: 700 }} 
+                  />
+                  <Typography variant="caption" sx={{ color: '#166534', fontWeight: 600 }}>
+                    1 Run Measured: <strong>{(activeTelemetryBenchmark.totalInputTokens || 0).toLocaleString()} input</strong> · <strong>{(activeTelemetryBenchmark.totalOutputTokens || 0).toLocaleString()} output</strong> (Total: {((activeTelemetryBenchmark.totalInputTokens || 0) + (activeTelemetryBenchmark.totalOutputTokens || 0)).toLocaleString()} tokens)
+                  </Typography>
+                </Box>
+                <Typography variant="caption" sx={{ color: '#15803d', fontSize: 11 }}>
+                  Sanity Check: Run <strong>Quick Estimate</strong> (with Volume = 1) to verify calibration against trace ground truth.
+                </Typography>
+              </Box>
+            )}
 
             {/* Sub-Header: Builder Utilities Toolbar */}
             <Box sx={{ 

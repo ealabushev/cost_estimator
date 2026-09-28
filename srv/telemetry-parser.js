@@ -355,6 +355,7 @@ function parseSpansToWorkflow(spans, options = {}) {
   const discoveredWorkersMap = new Map();
   let totalCacheReadTokens = 0;
   let totalInputTokensAcrossAll = 0;
+  let totalOutputTokensAcrossAll = 0;
   let hasParallelExecutions = false;
 
   for (const [traceId, traceSpans] of tracesMap.entries()) {
@@ -362,6 +363,9 @@ function parseSpansToWorkflow(spans, options = {}) {
     const childrenMap = new Map();
     for (const s of traceSpans) {
       spanMap.set(s.spanId, s);
+      if (s.inputTokens > 0) totalInputTokensAcrossAll += s.inputTokens;
+      if (s.outputTokens > 0) totalOutputTokensAcrossAll += s.outputTokens;
+      if (s.cacheReadTokens > 0) totalCacheReadTokens += s.cacheReadTokens;
       if (!childrenMap.has(s.parentSpanId)) {
         childrenMap.set(s.parentSpanId, []);
       }
@@ -488,8 +492,6 @@ function parseSpansToWorkflow(spans, options = {}) {
         if (ls.modelName) wEntry.models.push(ls.modelName);
         if (ls.inputTokens > 0) wEntry.promptTokensList.push(ls.inputTokens);
         if (ls.outputTokens > 0) wEntry.outputTokensList.push(ls.outputTokens);
-        totalCacheReadTokens += ls.cacheReadTokens || 0;
-        totalInputTokensAcrossAll += ls.inputTokens || 0;
       }
     }
 
@@ -528,6 +530,18 @@ function parseSpansToWorkflow(spans, options = {}) {
       ? Math.min(1.0, Math.round((wData.errorsCount / totalToolCalls) * 100) / 100)
       : 0.05;
 
+    const observedHops = chosenHops || 1.0;
+    const errorsPerRun = Math.round(wData.errorsCount / Math.max(1, wData.hopsList.length));
+    const nominalHops = Math.max(1, observedHops - errorsPerRun);
+
+    const isDecomposed = options.retryCalibrationMode === 'decomposed';
+    const isBakedIn = options.retryCalibrationMode === 'baked_in';
+
+    // In baked_in mode, observed hops already include retries, so retryProbability is capped at nominal 5%
+    // In decomposed mode, nominal hops (clean happy-path) are paired with the empirical error retry rate
+    const finalHops = isDecomposed ? nominalHops : observedHops;
+    const finalRetry = isBakedIn ? 0.05 : retryProb;
+
     const toolArray = Array.from(wData.toolsSet);
     const toolCount = Math.max(toolArray.length, chosenHops > 0 ? 1 : 0);
     const dominantWorkerModel = getDominantItem(wData.models) || 'gpt-4o-mini';
@@ -541,12 +555,16 @@ function parseSpansToWorkflow(spans, options = {}) {
       taskType,
       toolCount,
       toolsDiscovered: toolArray,
-      avgToolHops: chosenHops || 1.0,
+      avgToolHops: finalHops,
+      nominalHops,
+      observedHops,
+      errorsCount: wData.errorsCount,
+      observedErrorRate: retryProb,
       useCustomToolHops: true,
       avgObservationTokens: Math.round(chosenObs || 1000),
       basePromptTokens: Math.round(chosenPrompt || 400),
       avgOutputTokensPerHop: Math.round(chosenOut || 300),
-      retryProbability: retryProb,
+      retryProbability: finalRetry,
       executionMode: hasParallelExecutions ? 'parallel_map_reduce' : 'sequential',
       parallelInstances: hasParallelExecutions ? 2 : 1,
       isReflectorNode: false,
@@ -604,6 +622,10 @@ function parseSpansToWorkflow(spans, options = {}) {
       source: 'OpenTelemetry Trace Logs',
       runsAnalyzed: tracesMap.size,
       totalSpansProcessed: spans.length,
+      totalInputTokens: totalInputTokensAcrossAll,
+      totalOutputTokens: totalOutputTokensAcrossAll,
+      avgInputTokensPerRun: Math.round(totalInputTokensAcrossAll / Math.max(1, tracesMap.size)),
+      avgOutputTokensPerRun: Math.round(totalOutputTokensAcrossAll / Math.max(1, tracesMap.size)),
       baselineType,
       routingCyclesStats: routingCyclesDist,
       supervisorPromptTokens: Math.round(chosenSupervisorPrompt),
@@ -618,6 +640,10 @@ function parseSpansToWorkflow(spans, options = {}) {
     summary: {
       runsAnalyzed: tracesMap.size,
       totalSpans: spans.length,
+      totalInputTokens: totalInputTokensAcrossAll,
+      totalOutputTokens: totalOutputTokensAcrossAll,
+      avgInputTokensPerRun: Math.round(totalInputTokensAcrossAll / Math.max(1, tracesMap.size)),
+      avgOutputTokensPerRun: Math.round(totalOutputTokensAcrossAll / Math.max(1, tracesMap.size)),
       supervisorModel: supervisorModelName,
       supervisorPromptTokens: Math.round(chosenSupervisorPrompt),
       workerCount: derivedWorkers.length,
