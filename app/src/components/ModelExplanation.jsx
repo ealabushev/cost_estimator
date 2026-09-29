@@ -118,11 +118,11 @@ export default function ModelExplanation() {
             addStep(
                 `Worker Hop ${h}: Input Tokens`,
                 `Calculate the context window size for the worker agent's reasoning cycle ${h}. Note how history tokens accumulate.`,
-                ["base", "schema", "historyTok", "obs"],
-                () => `hopIn = ${v('base')} + ${v('schema')} + ${v('historyTok')} + (${h} - 1) * ${v('obs')}`,
-                () => `hopIn = ${val('base')} + ${val('schema')} + ${val('historyTok')} + (${h - 1} * ${val('obs')})`,
-                () => `hopIn = ${stateParams.base.val + stateParams.schema.val + stateParams.historyTok.val + ((h-1) * stateParams.obs.val)}`,
-                () => ({ "hopIn": stateParams.base.val + stateParams.schema.val + stateParams.historyTok.val + ((h-1) * stateParams.obs.val) })
+                ["base", "schema", "historyTok"],
+                () => `hopIn = ${v('base')} + ${v('schema')} + ${v('historyTok')}`,
+                () => `hopIn = ${val('base')} + ${val('schema')} + ${val('historyTok')}`,
+                () => `hopIn = ${stateParams.base.val + stateParams.schema.val + stateParams.historyTok.val}`,
+                () => ({ "hopIn": stateParams.base.val + stateParams.schema.val + stateParams.historyTok.val })
             );
 
             addStep(

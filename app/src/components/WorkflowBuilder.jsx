@@ -174,7 +174,6 @@ function CustomNode({ data }) {
   return (
     <Box 
       className="custom-node" 
-      title={data.showTokenOverlay && data.telemetry ? `Formula: ${data.telemetry.formula}` : undefined}
       sx={{
         borderLeft: 6,
         borderColor: isSupervisor ? 'primary.main' : isSynthesizer ? 'secondary.main' : 'success.main'
@@ -225,26 +224,73 @@ function CustomNode({ data }) {
           </>
         )}
         {data.showTokenOverlay && data.telemetry && (
-          <Box className="token-telemetry-box" title={`Formula: ${data.telemetry.formula}`}>
-            <Box className="telemetry-row">
-              <span className="telemetry-label">🪙 Input / Out:</span>
-              <span className="telemetry-value">{data.telemetry.inputTokens.toLocaleString()} / {data.telemetry.outputTokens.toLocaleString()}</span>
-            </Box>
-            {data.telemetry.thinkingTokens > 0 && (
-              <Box className="telemetry-row">
-                <span className="telemetry-label">🧠 Thinking:</span>
-                <span className="telemetry-value telemetry-highlight">{data.telemetry.thinkingTokens.toLocaleString()} tok</span>
+          <Tooltip
+            arrow
+            placement="right"
+            enterDelay={150}
+            componentsProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: '#0f172a',
+                  color: '#f8fafc',
+                  p: 1.5,
+                  maxWidth: 420,
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
+                  border: '1px solid #334155',
+                  borderRadius: 2
+                }
+              },
+              arrow: {
+                sx: { color: '#0f172a' }
+              }
+            }}
+            title={
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155', pb: 0.75, gap: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#38bdf8', letterSpacing: 0.5, textTransform: 'uppercase', fontSize: '10px' }}>
+                    {isSupervisor ? 'Supervisor Routing Formula' : isSynthesizer ? 'Synthesizer Formula' : `Worker Reasoning Formula (${data.telemetry.hops || 1} Hops)`}
+                  </Typography>
+                  <Chip 
+                    label={`${data.telemetry.inputTokens.toLocaleString()} in · ${data.telemetry.outputTokens.toLocaleString()} out`} 
+                    size="small" 
+                    sx={{ height: 18, fontSize: '9px', fontWeight: 700, bgcolor: '#1e293b', color: '#38bdf8', border: '1px solid #334155' }} 
+                  />
+                </Box>
+                <Typography variant="caption" component="pre" sx={{ m: 0, whiteSpace: 'pre-wrap', fontFamily: 'SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: '11px', color: '#e2e8f0', lineHeight: 1.45 }}>
+                  {data.telemetry.formula}
+                </Typography>
+                <Box sx={{ borderTop: '1px solid #334155', pt: 0.75, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '10px' }}>
+                    AI Hub CU: <strong style={{ color: '#cbd5e1' }}>{data.telemetry.cu} CU</strong>
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#4ade80', fontWeight: 700, fontSize: '11px' }}>
+                    {data.telemetry.costEur}
+                  </Typography>
+                </Box>
               </Box>
-            )}
-            <Box className="telemetry-row">
-              <span className="telemetry-label">⚡ AI Hub CU:</span>
-              <span className="telemetry-value">{data.telemetry.cu}</span>
+            }
+          >
+            <Box className="token-telemetry-box" sx={{ cursor: 'help' }}>
+              <Box className="telemetry-row">
+                <span className="telemetry-label">🪙 Input / Out:</span>
+                <span className="telemetry-value">{data.telemetry.inputTokens.toLocaleString()} / {data.telemetry.outputTokens.toLocaleString()}</span>
+              </Box>
+              {data.telemetry.thinkingTokens > 0 && (
+                <Box className="telemetry-row">
+                  <span className="telemetry-label">🧠 Thinking:</span>
+                  <span className="telemetry-value telemetry-highlight">{data.telemetry.thinkingTokens.toLocaleString()} tok</span>
+                </Box>
+              )}
+              <Box className="telemetry-row">
+                <span className="telemetry-label">⚡ AI Hub CU:</span>
+                <span className="telemetry-value">{data.telemetry.cu}</span>
+              </Box>
+              <Box className="telemetry-row">
+                <span className="telemetry-label">💶 Est. Cost:</span>
+                <span className="telemetry-value telemetry-cost">{data.telemetry.costEur}</span>
+              </Box>
             </Box>
-            <Box className="telemetry-row">
-              <span className="telemetry-label">💶 Est. Cost:</span>
-              <span className="telemetry-value telemetry-cost">{data.telemetry.costEur}</span>
-            </Box>
-          </Box>
+          </Tooltip>
         )}
       </Box>
       {/* Handles for connections */}
@@ -871,36 +917,66 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     let outputTokens = 0;
     let thinkingTokens = 0;
     let formula = '';
+    let hopsCount = 1;
 
     if (nodeType === 'supervisor') {
       const sysTok = Number(supervisorSystemPromptTokens) || 500;
       const regTok = Number(workerRegistryTokens) || 200;
-      inputTokens = sysTok + regTok + 500;
-      outputTokens = 150;
-      formula = `System Prompt (${sysTok}) + Worker Registry (${regTok}) + Est. History (500)`;
+      // In multi-agent routing, supervisor evaluates state and routes across cycles.
+      // Baseline routing request includes system prompt, worker tool registry, and routing context history (~500 tok).
+      const histTok = 500;
+      inputTokens = sysTok + regTok + histTok;
+      outputTokens = 150; // Standard routing decision / worker dispatch JSON call
+      hopsCount = 1;
+
+      formula = `• Input: ${inputTokens.toLocaleString()} tok = System Prompt (${sysTok}) + Worker Registry (${regTok}) + Routing Context History (${histTok})\n• Output: ${outputTokens.toLocaleString()} tok = Routing Decision / Worker Dispatch Payload\n• Total: ${(inputTokens + outputTokens).toLocaleString()} tokens (${inputTokens.toLocaleString()} in / ${outputTokens.toLocaleString()} out)`;
     } else if (nodeType === 'synthesizer') {
       inputTokens = 1500;
       outputTokens = 500;
       thinkingTokens = Math.round(outputTokens * thinkingMult);
-      formula = 'Aggregated Worker Outputs (1500) → Final Synthesis (500)';
+      hopsCount = 1;
+
+      formula = `• Input: 1,500 tok = Aggregated Worker Outputs Context\n• Output: 500 tok = Final Synthesis & Summary Report${thinkingTokens > 0 ? `\n• Thinking: ${thinkingTokens.toLocaleString()} tok (${outputTokens} out × ${thinkingMult}x)` : ''}\n• Total: ${(inputTokens + outputTokens + thinkingTokens).toLocaleString()} tokens (1,500 in / 500 out)`;
     } else if (nodeType === 'worker' && workerConfig) {
-      const hops = getDerivedHops(workerConfig);
+      const hops = Math.max(1, getDerivedHops(workerConfig));
+      hopsCount = hops;
       const toolCount = workerConfig.toolCount || 0;
       const obsTokens = workerConfig.avgObservationTokens || 1000;
       const basePrompt = workerConfig.basePromptTokens !== undefined && workerConfig.basePromptTokens !== null ? Number(workerConfig.basePromptTokens) : 400;
       const hopOutTok = workerConfig.avgOutputTokensPerHop !== undefined && workerConfig.avgOutputTokensPerHop !== null ? Number(workerConfig.avgOutputTokensPerHop) : 300;
       const schemaTok = Number(avgToolSchemaTokens) || 250;
+      const toolSchemaTotal = toolCount * schemaTok;
       
       let totalInput = 0;
       let hist = 0;
+      const hopDetails = [];
+
       for (let h = 1; h <= hops; h++) {
-        totalInput += basePrompt + (toolCount * schemaTok) + hist + ((h - 1) * obsTokens);
-        hist += Math.round((hopOutTok + obsTokens) * 0.7);
+        // Matches srv/estimation-service.js line 1040:
+        // Context window for hop h = base prompt + tool schemas + accumulated history from previous hops
+        const hopIn = basePrompt + toolSchemaTotal + hist;
+        totalInput += hopIn;
+        hopDetails.push({
+          hop: h,
+          hopIn,
+          base: basePrompt,
+          tools: toolSchemaTotal,
+          hist
+        });
+        // Matches srv/estimation-service.js line 1058-1059:
+        // Assistant tool call (~300 tok max) + observation, with 30% history compression (0.7 factor)
+        const stateAppendOutputTok = Math.min(300, hopOutTok);
+        hist += Math.round((stateAppendOutputTok + obsTokens) * 0.7);
       }
       inputTokens = Math.round(totalInput);
       outputTokens = Math.round(hopOutTok * hops);
       thinkingTokens = Math.round(outputTokens * thinkingMult);
-      formula = `Base (${basePrompt}) + ${toolCount} Tools × ${schemaTok} + Obs (${obsTokens}) across ${hops} hops`;
+
+      const hopInputBreakdown = hops === 1
+        ? `Base (${basePrompt}) + Tools (${toolCount} × ${schemaTok} = ${toolSchemaTotal}) = ${inputTokens.toLocaleString()} tok`
+        : hopDetails.map(d => `Hop ${d.hop}: ${d.base} base + ${d.tools} tools${d.hist > 0 ? ` + ${d.hist} hist` : ''} = ${d.hopIn.toLocaleString()} tok`).join('\n  ↳ ') + `\n  Total Input = ${hopDetails.map(d => d.hopIn.toLocaleString()).join(' + ')} = ${inputTokens.toLocaleString()} tok`;
+
+      formula = `• Input: ${inputTokens.toLocaleString()} tok across ${hops} ${hops === 1 ? 'hop' : 'hops'}\n  ↳ ${hopInputBreakdown}\n• Output: ${outputTokens.toLocaleString()} tok (${hops} ${hops === 1 ? 'hop' : 'hops'} × ${hopOutTok} tok/hop)${thinkingTokens > 0 ? `\n• Thinking: ${thinkingTokens.toLocaleString()} tok (${outputTokens.toLocaleString()} out × ${thinkingMult}x)` : ''}\n• Total: ${(inputTokens + outputTokens + thinkingTokens).toLocaleString()} tokens (${inputTokens.toLocaleString()} in / ${outputTokens.toLocaleString()} out${thinkingTokens > 0 ? ` + ${thinkingTokens.toLocaleString()} think` : ''})`;
     }
 
     const billableOutput = outputTokens + thinkingTokens;
@@ -916,6 +992,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       inputTokens,
       outputTokens,
       thinkingTokens,
+      hops: hopsCount,
       cu: cu.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 }),
       costEur: costEur > 0 ? `€${costEur.toFixed(4)}` : (costUsd > 0 ? `$${costUsd.toFixed(4)}` : '€0.0050'),
       formula
