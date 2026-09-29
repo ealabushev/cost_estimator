@@ -1,6 +1,6 @@
 using { costestimator as db } from '../db/schema';
 
-service EstimationService @(path: '/api/v1/estimation') {
+service EstimationService @(path: '/api/v1/estimation', cds.server.body_parser.limit: '50mb') {
 
     entity ModelConfigs as projection on db.ModelConfigs;
     entity WorkerConfigs as projection on db.WorkerConfigs;

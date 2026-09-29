@@ -777,6 +777,12 @@ export default function TelemetryImportModal({
                 />
               </Box>
             </Box>
+
+            {errorMsg && (
+              <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }} onClose={() => setErrorMsg(null)}>
+                {errorMsg}
+              </Alert>
+            )}
           </Box>
         )}
       </DialogContent>

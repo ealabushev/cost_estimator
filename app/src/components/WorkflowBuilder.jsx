@@ -329,8 +329,9 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   const [showTokenOverlay, setShowTokenOverlay] = useState(true);
   const [showMiniMap, setShowMiniMap] = useState(false);
 
-  // Error notifications
+  // Error and success notifications
   const [errorMsg, setErrorMsg] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
 
   // Automatically bypass template selection if workflow was loaded from history
   useEffect(() => {
@@ -1093,6 +1094,11 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       {errorMsg && (
         <Alert severity="error" onClose={() => setErrorMsg(null)} sx={{ borderRadius: 2 }}>
           {errorMsg}
+        </Alert>
+      )}
+      {successMsg && (
+        <Alert severity="success" onClose={() => setSuccessMsg(null)} sx={{ borderRadius: 2 }}>
+          {successMsg}
         </Alert>
       )}
 
@@ -2146,8 +2152,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         onClose={() => setIsTelemetryModalOpen(false)}
         models={models}
         onApplyTemplate={(draft) => handleApplyTemplate(draft)}
-        onTemplateSaved={() => {
-          fetchCustomTemplates();
+        onTemplateSaved={async (savedTpl) => {
+          await fetchCustomTemplates();
+          setIsTemplateSelected(false);
+          setSuccessMsg(`Template "${savedTpl?.name || 'Custom Template'}" saved successfully and added to your template library.`);
         }}
       />
     </Box>
