@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, Button, Table,
   TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, IconButton, Alert, Chip, Divider, Checkbox
+  Paper, IconButton, Alert, Chip, Divider, Checkbox,
+  TextField, InputAdornment, FormControl, InputLabel, Select, MenuItem,
+  Tooltip
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import SearchIcon from '@mui/icons-material/Search';
+import BusinessIcon from '@mui/icons-material/Business';
+import PersonIcon from '@mui/icons-material/Person';
+import ClearIcon from '@mui/icons-material/Clear';
 
 const formatCu = (value) => `${(Number.parseFloat(value) || 0).toLocaleString('en-US', {
   minimumFractionDigits: 4,
@@ -18,6 +24,13 @@ export default function HistoryComparison({ onLoadWorkflow }) {
   const [workflows, setWorkflows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+
+  // Multi-user & Multi-customer Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProject, setSelectedProject] = useState('ALL');
+  const [selectedUser, setSelectedUser] = useState('ALL');
+  const [selectedTag, setSelectedTag] = useState('ALL');
+  const [sortBy, setSortBy] = useState('date_desc');
 
   // A/B Comparison Selection state
   const [selectedIds, setSelectedIds] = useState([]);
@@ -50,25 +63,98 @@ export default function HistoryComparison({ onLoadWorkflow }) {
   }, []);
 
   // Map workflow config details to estimation records
-  const mappedEstimations = estimations.map(est => {
-    const wf = workflows.find(w => w.ID === est.workflow_ID);
-    const medianRes = est.scenarios?.find(s => s.scenarioName === 'median') || est.scenarios?.[0];
-    
-    return {
-      ID: est.ID,
-      workflowId: est.workflow_ID,
-      name: wf ? wf.name : 'Unknown Workflow',
-      project: wf ? wf.project : 'Default',
-      stateMode: wf ? wf.stateMode : 'scoped_subgraph',
-      volume: wf ? wf.monthlyRunVolume : 10000,
-      createdAt: est.createdAt,
-      medianTco: medianRes ? parseFloat(medianRes.monthlyTcoUsd) : 0,
-      medianCpo: medianRes ? parseFloat(medianRes.costPerRunUsd) : 0,
-      medianBtp: medianRes ? parseFloat(medianRes.monthlyTcoBtpCredits) : 0,
-      rawObj: est,
-      workflowObj: wf
-    };
-  }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const mappedEstimations = useMemo(() => {
+    return estimations.map(est => {
+      const wf = workflows.find(w => w.ID === est.workflow_ID);
+      const medianRes = est.scenarios?.find(s => s.scenarioName === 'median') || est.scenarios?.[0];
+      
+      return {
+        ID: est.ID,
+        workflowId: est.workflow_ID,
+        name: wf ? wf.name : 'Unknown Workflow',
+        project: (wf?.project || 'Default').trim(),
+        stateMode: wf ? wf.stateMode : 'scoped_subgraph',
+        volume: wf ? wf.monthlyRunVolume : 10000,
+        createdAt: est.createdAt,
+        createdBy: (est.createdBy || wf?.createdBy || 'anonymous').trim(),
+        tags: wf?.tags || '',
+        medianTco: medianRes ? parseFloat(medianRes.monthlyTcoUsd) : 0,
+        medianCpo: medianRes ? parseFloat(medianRes.costPerRunUsd) : 0,
+        medianBtp: medianRes ? parseFloat(medianRes.monthlyTcoBtpCredits) : 0,
+        rawObj: est,
+        workflowObj: wf
+      };
+    });
+  }, [estimations, workflows]);
+
+  // Extract distinct Customer/Project values
+  const allProjects = useMemo(() => {
+    const set = new Set();
+    mappedEstimations.forEach(e => {
+      if (e.project) set.add(e.project);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [mappedEstimations]);
+
+  // Extract distinct Users/Creators
+  const allUsers = useMemo(() => {
+    const set = new Set();
+    mappedEstimations.forEach(e => {
+      if (e.createdBy) set.add(e.createdBy);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [mappedEstimations]);
+
+  // Extract distinct tags
+  const allTags = useMemo(() => {
+    const set = new Set();
+    mappedEstimations.forEach(e => {
+      if (e.tags) {
+        e.tags.split(' ').map(t => t.trim()).filter(Boolean).forEach(t => set.add(t));
+      }
+    });
+    return Array.from(set).sort();
+  }, [mappedEstimations]);
+
+  // Filtered & Sorted Estimations
+  const filteredEstimations = useMemo(() => {
+    return mappedEstimations.filter(item => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = item.name.toLowerCase().includes(q);
+        const matchProj = item.project.toLowerCase().includes(q);
+        const matchTags = item.tags.toLowerCase().includes(q);
+        const matchUser = item.createdBy.toLowerCase().includes(q);
+        if (!matchName && !matchProj && !matchTags && !matchUser) return false;
+      }
+      if (selectedProject !== 'ALL' && item.project !== selectedProject) {
+        return false;
+      }
+      if (selectedUser !== 'ALL' && item.createdBy !== selectedUser) {
+        return false;
+      }
+      if (selectedTag !== 'ALL') {
+        const tagsArr = item.tags.split(' ').map(t => t.trim());
+        if (!tagsArr.includes(selectedTag)) return false;
+      }
+      return true;
+    }).sort((a, b) => {
+      if (sortBy === 'date_asc') return new Date(a.createdAt) - new Date(b.createdAt);
+      if (sortBy === 'tco_desc') return b.medianTco - a.medianTco;
+      if (sortBy === 'tco_asc') return a.medianTco - b.medianTco;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  }, [mappedEstimations, searchQuery, selectedProject, selectedUser, selectedTag, sortBy]);
+
+  const hasActiveFilters = searchQuery.trim() !== '' || selectedProject !== 'ALL' || selectedUser !== 'ALL' || selectedTag !== 'ALL' || sortBy !== 'date_desc';
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedProject('ALL');
+    setSelectedUser('ALL');
+    setSelectedTag('ALL');
+    setSortBy('date_desc');
+  };
 
   // Handle estimation deletion
   const handleDelete = async (id) => {
@@ -203,20 +289,154 @@ export default function HistoryComparison({ onLoadWorkflow }) {
 
       {/* Saved Estimations List */}
       <Card>
-        <Box sx={{ p: 2.5, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            Available estimations
-          </Typography>
-          <Button 
-            variant="contained" 
-            color="primary"
-            startIcon={<CompareArrowsIcon />}
-            disabled={selectedIds.length !== 2}
-            onClick={handleRunComparison}
-          >
-            Compare Selected (A/B)
-          </Button>
+        <Box sx={{ p: 2.5, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+              Available estimations
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Showing {filteredEstimations.length} of {mappedEstimations.length} historical run{mappedEstimations.length === 1 ? '' : 's'} across clients & team members
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            {hasActiveFilters && (
+              <Button 
+                size="small" 
+                variant="text" 
+                color="secondary"
+                startIcon={<ClearIcon />}
+                onClick={handleClearFilters}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                Reset Filters
+              </Button>
+            )}
+            <Button 
+              variant="contained" 
+              color="primary"
+              startIcon={<CompareArrowsIcon />}
+              disabled={selectedIds.length !== 2}
+              onClick={handleRunComparison}
+            >
+              Compare Selected (A/B)
+            </Button>
+          </Box>
         </Box>
+
+        {/* Multi-Customer & Multi-User Filter Toolbar */}
+        <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Grid container spacing={1.5} alignItems="center">
+            {/* Search Input */}
+            <Grid item xs={12} sm={6} md={4}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search workflow, customer, user, tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setSearchQuery('')}>
+                        <ClearIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+                sx={{ bgcolor: 'background.paper', borderRadius: 1 }}
+              />
+            </Grid>
+
+            {/* Customer / Project Dropdown */}
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small" sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                <InputLabel id="project-filter-label">Customer / Project</InputLabel>
+                <Select
+                  labelId="project-filter-label"
+                  value={selectedProject}
+                  label="Customer / Project"
+                  onChange={(e) => setSelectedProject(e.target.value)}
+                >
+                  <MenuItem value="ALL">All Customers & Projects ({allProjects.length})</MenuItem>
+                  {allProjects.map(proj => (
+                    <MenuItem key={proj} value={proj}>{proj}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* User / Created By Dropdown */}
+            <Grid item xs={12} sm={6} md={2.5}>
+              <FormControl fullWidth size="small" sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                <InputLabel id="user-filter-label">Created By</InputLabel>
+                <Select
+                  labelId="user-filter-label"
+                  value={selectedUser}
+                  label="Created By"
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                >
+                  <MenuItem value="ALL">All Users ({allUsers.length})</MenuItem>
+                  {allUsers.map(usr => (
+                    <MenuItem key={usr} value={usr}>{usr}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Sort Dropdown */}
+            <Grid item xs={12} sm={6} md={2.5}>
+              <FormControl fullWidth size="small" sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                <InputLabel id="sort-filter-label">Sort By</InputLabel>
+                <Select
+                  labelId="sort-filter-label"
+                  value={sortBy}
+                  label="Sort By"
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <MenuItem value="date_desc">Newest First</MenuItem>
+                  <MenuItem value="date_asc">Oldest First</MenuItem>
+                  <MenuItem value="tco_desc">Highest Monthly TCO</MenuItem>
+                  <MenuItem value="tco_asc">Lowest Monthly TCO</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          {/* Quick Tag Filter Pills */}
+          {allTags.length > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', pt: 0.5 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                Filter by Tag:
+              </Typography>
+              <Chip
+                label="All Tags"
+                size="small"
+                clickable
+                color={selectedTag === 'ALL' ? 'primary' : 'default'}
+                onClick={() => setSelectedTag('ALL')}
+                sx={{ height: 22, fontSize: 11, fontWeight: selectedTag === 'ALL' ? 700 : 500 }}
+              />
+              {allTags.map(tag => (
+                <Chip
+                  key={tag}
+                  label={tag}
+                  size="small"
+                  clickable
+                  color={selectedTag === tag ? 'primary' : 'default'}
+                  variant={selectedTag === tag ? 'filled' : 'outlined'}
+                  onClick={() => setSelectedTag(prev => prev === tag ? 'ALL' : tag)}
+                  sx={{ height: 22, fontSize: 11 }}
+                />
+              ))}
+            </Box>
+          )}
+        </Box>
+
         <TableContainer>
           <Table>
             <TableHead sx={{ bgcolor: 'background.default' }}>
@@ -224,8 +444,8 @@ export default function HistoryComparison({ onLoadWorkflow }) {
                 <TableCell padding="checkbox">
                   <Typography variant="caption" sx={{ fontWeight: 700 }}>Diff</Typography>
                 </TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Workflow Configurations</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>BTP Project / Domain</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Workflow & Creator</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Customer / Project</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>State mode</TableCell>
                 <TableCell sx={{ fontWeight: 700 }} align="right">Monthly TCO</TableCell>
                 <TableCell sx={{ fontWeight: 700 }} align="right">Cost per Outcome</TableCell>
@@ -240,14 +460,25 @@ export default function HistoryComparison({ onLoadWorkflow }) {
                     Loading history...
                   </TableCell>
                 </TableRow>
-              ) : mappedEstimations.length === 0 ? (
+              ) : filteredEstimations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
-                    No estimations saved. Configure and run an estimate in the Builder to persist results.
+                    {hasActiveFilters ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No estimations match the active filter criteria.
+                        </Typography>
+                        <Button size="small" variant="outlined" onClick={handleClearFilters}>
+                          Reset All Filters
+                        </Button>
+                      </Box>
+                    ) : (
+                      "No estimations saved. Configure and run an estimate in the Builder to persist results."
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
-                mappedEstimations.map(row => (
+                filteredEstimations.map(row => (
                   <TableRow key={row.ID} hover>
                     <TableCell padding="checkbox">
                       <Checkbox 
@@ -255,8 +486,27 @@ export default function HistoryComparison({ onLoadWorkflow }) {
                         onChange={() => handleSelectCompare(row.ID)}
                       />
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>{row.name}</TableCell>
-                    <TableCell>{row.project}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{row.name}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                          <PersonIcon sx={{ fontSize: 13, color: 'text.secondary' }} /> {row.createdBy}
+                        </Typography>
+                        {row.tags && (
+                          <Typography variant="caption" sx={{ color: 'primary.main', fontSize: 11 }}>
+                            · {row.tags}
+                          </Typography>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={row.project} 
+                        size="small" 
+                        variant="outlined" 
+                        sx={{ fontWeight: 600, fontSize: 11, borderColor: '#cbd5e1', bgcolor: '#f8fafc' }} 
+                      />
+                    </TableCell>
                     <TableCell>
                       <Chip 
                         label={row.stateMode === 'scoped_subgraph' ? 'Scoped Subgraph' : 'Shared Global'} 

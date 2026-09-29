@@ -18,7 +18,7 @@ import {
   Box, Grid, Card, CardContent, Typography, Button, TextField, Select,
   MenuItem, FormControl, InputLabel, FormControlLabel, Switch, Drawer,
   IconButton, Divider, Slider, Chip, Alert, CircularProgress, RadioGroup, Radio,
-  ListSubheader, Tooltip
+  ListSubheader, Tooltip, InputAdornment, Paper
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -33,6 +33,9 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import HelpOutlinedIcon from '@mui/icons-material/HelpOutlined';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import BusinessIcon from '@mui/icons-material/Business';
 
 import ExecutiveDashboard from './ExecutiveDashboard';
 import TelemetryImportModal from './TelemetryImportModal';
@@ -282,6 +285,11 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   const [isTelemetryModalOpen, setIsTelemetryModalOpen] = useState(false);
   const [activeTelemetryBenchmark, setActiveTelemetryBenchmark] = useState(null);
 
+  // Template Gallery Search & Filter states
+  const [templateSearch, setTemplateSearch] = useState('');
+  const [templateCategory, setTemplateCategory] = useState('all'); // 'all' | 'custom' | 'preset'
+  const [templateProject, setTemplateProject] = useState('ALL');
+
   // Form inputs representing the active WorkflowConfig
   const [name, setName] = useState('New Agentic Workflow');
   const [project, setProject] = useState('Default Project');
@@ -474,6 +482,63 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   useEffect(() => {
     fetchCustomTemplates();
   }, [fetchCustomTemplates]);
+
+  // Extract distinct Customer / Domain values across custom templates and presets
+  const allTemplateProjects = useMemo(() => {
+    const set = new Set();
+    customTemplates.forEach(t => {
+      if (t.project && t.project.trim()) set.add(t.project.trim());
+    });
+    TEMPLATE_PRESETS.forEach(t => {
+      if (t.project && t.project.trim()) set.add(t.project.trim());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [customTemplates]);
+
+  // Filtered Custom Templates
+  const filteredCustomTemplates = useMemo(() => {
+    if (templateCategory === 'preset') return [];
+    return customTemplates.filter(t => {
+      if (templateSearch.trim()) {
+        const q = templateSearch.toLowerCase();
+        const matchName = (t.name || '').toLowerCase().includes(q);
+        const matchDesc = (t.description || t.notes || '').toLowerCase().includes(q);
+        const matchProj = (t.project || '').toLowerCase().includes(q);
+        const matchTags = (t.tags || '').toLowerCase().includes(q);
+        if (!matchName && !matchDesc && !matchProj && !matchTags) return false;
+      }
+      if (templateProject !== 'ALL' && (t.project || '').trim() !== templateProject) {
+        return false;
+      }
+      return true;
+    });
+  }, [customTemplates, templateSearch, templateCategory, templateProject]);
+
+  // Filtered SAP Presets
+  const filteredPresets = useMemo(() => {
+    if (templateCategory === 'custom') return [];
+    return TEMPLATE_PRESETS.filter(t => {
+      if (templateSearch.trim()) {
+        const q = templateSearch.toLowerCase();
+        const matchName = (t.name || '').toLowerCase().includes(q);
+        const matchDesc = (t.description || '').toLowerCase().includes(q);
+        const matchProj = (t.project || '').toLowerCase().includes(q);
+        const matchTags = (t.tags || '').toLowerCase().includes(q);
+        if (!matchName && !matchDesc && !matchProj && !matchTags) return false;
+      }
+      if (templateProject !== 'ALL' && (t.project || '').trim() !== templateProject) {
+        return false;
+      }
+      return true;
+    });
+  }, [templateSearch, templateCategory, templateProject]);
+
+  const hasActiveTemplateFilters = templateSearch.trim() !== '' || templateCategory !== 'all' || templateProject !== 'ALL';
+  const handleResetTemplateFilters = () => {
+    setTemplateSearch('');
+    setTemplateCategory('all');
+    setTemplateProject('ALL');
+  };
 
   const toggleModelProvider = useCallback((provider) => {
     setCollapsedModelProviders(prev => {
@@ -1138,6 +1203,117 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
             </Typography>
           </Box>
 
+          {/* Search & Filter Toolbar */}
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              p: 2, 
+              borderRadius: 3, 
+              border: '1px solid', 
+              borderColor: 'divider', 
+              bgcolor: '#ffffff',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5
+            }}
+          >
+            <Grid container spacing={2} alignItems="center">
+              {/* Search text field */}
+              <Grid item xs={12} sm={6} md={5}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Search template name, customer, tags..."
+                  value={templateSearch}
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: templateSearch && (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={() => setTemplateSearch('')}>
+                          <ClearIcon fontSize="small" />
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }}
+                  sx={{ bgcolor: '#f8fafc', borderRadius: 1 }}
+                />
+              </Grid>
+
+              {/* Customer / Domain Dropdown */}
+              <Grid item xs={12} sm={6} md={4}>
+                <FormControl fullWidth size="small" sx={{ bgcolor: '#f8fafc', borderRadius: 1 }}>
+                  <InputLabel id="tpl-project-filter-label">Customer / Domain</InputLabel>
+                  <Select
+                    labelId="tpl-project-filter-label"
+                    value={templateProject}
+                    label="Customer / Domain"
+                    onChange={(e) => setTemplateProject(e.target.value)}
+                  >
+                    <MenuItem value="ALL">All Customers & Domains ({allTemplateProjects.length})</MenuItem>
+                    {allTemplateProjects.map(proj => (
+                      <MenuItem key={proj} value={proj}>{proj}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Reset Filters action */}
+              <Grid item xs={12} md={3} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, alignItems: 'center' }}>
+                {hasActiveTemplateFilters && (
+                  <Button 
+                    size="small" 
+                    variant="text" 
+                    color="secondary"
+                    startIcon={<ClearIcon />}
+                    onClick={handleResetTemplateFilters}
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                  >
+                    Reset Filters
+                  </Button>
+                )}
+              </Grid>
+            </Grid>
+
+            {/* Category / Source Filter Chips */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', pt: 0.5 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', mr: 0.5 }}>
+                Category:
+              </Typography>
+              <Chip
+                label={`All Templates (${customTemplates.length + TEMPLATE_PRESETS.length})`}
+                size="small"
+                clickable
+                color={templateCategory === 'all' ? 'primary' : 'default'}
+                variant={templateCategory === 'all' ? 'filled' : 'outlined'}
+                onClick={() => setTemplateCategory('all')}
+                sx={{ height: 24, fontSize: 12, fontWeight: templateCategory === 'all' ? 700 : 500 }}
+              />
+              <Chip
+                label={`Custom & OTel (${customTemplates.length})`}
+                size="small"
+                clickable
+                color={templateCategory === 'custom' ? 'primary' : 'default'}
+                variant={templateCategory === 'custom' ? 'filled' : 'outlined'}
+                onClick={() => setTemplateCategory(prev => prev === 'custom' ? 'all' : 'custom')}
+                sx={{ height: 24, fontSize: 12, fontWeight: templateCategory === 'custom' ? 700 : 500 }}
+              />
+              <Chip
+                label={`SAP Presets (${TEMPLATE_PRESETS.length})`}
+                size="small"
+                clickable
+                color={templateCategory === 'preset' ? 'primary' : 'default'}
+                variant={templateCategory === 'preset' ? 'filled' : 'outlined'}
+                onClick={() => setTemplateCategory(prev => prev === 'preset' ? 'all' : 'preset')}
+                sx={{ height: 24, fontSize: 12, fontWeight: templateCategory === 'preset' ? 700 : 500 }}
+              />
+            </Box>
+          </Paper>
+
           {/* Template Grid */}
           <Box sx={{ 
             display: 'grid', 
@@ -1145,6 +1321,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
             gap: 3 
           }}>
             {/* OpenTelemetry Ingestion Hero Card */}
+            {templateCategory !== 'preset' && (
             <Card 
               onClick={() => setIsTelemetryModalOpen(true)}
               sx={{ 
@@ -1239,9 +1416,10 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                 </Button>
               </CardContent>
             </Card>
+            )}
 
             {/* Custom Saved Templates from Database */}
-            {customTemplates.map((t, idx) => (
+            {filteredCustomTemplates.map((t, idx) => (
               <Card 
                 key={`custom-tpl-${idx}`}
                 onClick={() => handleApplyTemplate(t)}
@@ -1274,8 +1452,8 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                   }
                 }}
               >
-                <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 48 }}>
+                <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 40 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700, color: 'secondary.main', lineHeight: 1.2, fontSize: '1rem' }}>
                       {t.name}
                     </Typography>
@@ -1293,13 +1471,28 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     />
                   </Box>
 
+                  {/* Customer / Project Badge & Creator */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <Chip 
+                      label={t.project || 'Default Project'} 
+                      size="small" 
+                      variant="outlined" 
+                      sx={{ fontWeight: 600, fontSize: '11px', height: 20, bgcolor: '#f8fafc', borderColor: '#cbd5e1' }}
+                    />
+                    {t.createdBy && (
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '11px' }}>
+                        by {t.createdBy}
+                      </Typography>
+                    )}
+                  </Box>
+
                   <Typography 
                     variant="body2" 
                     color="text.secondary" 
                     sx={{ 
-                      height: 40, 
+                      height: 38, 
                       fontSize: '13px', 
-                      lineHeight: 1.5,
+                      lineHeight: 1.4,
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
@@ -1312,12 +1505,12 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
                   <Box sx={{ 
                     bgcolor: '#f8fafc', 
-                    p: 2, 
+                    p: 1.5, 
                     borderRadius: 2, 
                     border: '1px dashed #e2e8f0',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 1
+                    gap: 0.8
                   }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="caption" color="text.secondary">Orchestration:</Typography>
@@ -1339,7 +1532,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     </Box>
                   </Box>
 
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto', minHeight: 24, alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto', minHeight: 22, alignItems: 'center' }}>
                     {(t.tags || 'custom').split(' ').map((tag, tIdx) => (
                       <Chip key={tIdx} label={tag} size="small" sx={{ fontSize: '9px', height: 18 }} />
                     ))}
@@ -1348,7 +1541,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
               </Card>
             ))}
 
-            {TEMPLATE_PRESETS.map((t, idx) => {
+            {filteredPresets.map((t, idx) => {
               const isCustom = t.name === 'Custom Workflow';
               return (
                 <Card 
@@ -1384,8 +1577,8 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     }
                   }}
                 >
-                  <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 48 }}>
+                  <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 40 }}>
                       <Typography variant="h6" sx={{ fontWeight: 700, color: 'secondary.main', lineHeight: 1.2, fontSize: '1rem' }}>
                         {t.name}
                       </Typography>
@@ -1421,13 +1614,23 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                       )}
                     </Box>
 
+                    {/* Customer / Domain Badge */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Chip 
+                        label={t.project} 
+                        size="small" 
+                        variant="outlined" 
+                        sx={{ fontWeight: 600, fontSize: '11px', height: 20, bgcolor: '#f8fafc', borderColor: '#cbd5e1' }}
+                      />
+                    </Box>
+
                     <Typography 
                       variant="body2" 
                       color="text.secondary" 
                       sx={{ 
-                        height: 40, 
+                        height: 38, 
                         fontSize: '13px', 
-                        lineHeight: 1.5,
+                        lineHeight: 1.4,
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
@@ -1441,12 +1644,12 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     {/* Metadata summary */}
                     <Box sx={{ 
                       bgcolor: '#f8fafc', 
-                      p: 2, 
+                      p: 1.5, 
                       borderRadius: 2, 
                       border: '1px dashed #e2e8f0',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 1
+                      gap: 0.8
                     }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="caption" color="text.secondary">Orchestration:</Typography>
@@ -1469,7 +1672,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     </Box>
 
                     {/* Tags */}
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto', minHeight: 24, alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto', minHeight: 22, alignItems: 'center' }}>
                       {t.tags.split(' ').map((tag, tIdx) => (
                         <Chip key={tIdx} label={tag} size="small" sx={{ fontSize: '9px', height: 18 }} />
                       ))}
@@ -1478,6 +1681,21 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                 </Card>
               );
             })}
+
+            {/* Empty State when no templates match */}
+            {filteredCustomTemplates.length === 0 && filteredPresets.length === 0 && (
+              <Card sx={{ gridColumn: '1 / -1', p: 5, textAlign: 'center', bgcolor: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.secondary', mb: 1 }}>
+                  No workflow templates match the current filter criteria
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Try adjusting your search query, selecting "All Customers", or resetting the category filter.
+                </Typography>
+                <Button variant="outlined" size="small" onClick={handleResetTemplateFilters}>
+                  Reset All Filters
+                </Button>
+              </Card>
+            )}
           </Box>
         </Box>
       ) : (
@@ -1488,10 +1706,15 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'background.paper', zIndex: 5 }}>
               {/* Left: Title */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <LayersIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  Interactive Orchestration Topology Map
-                </Typography>
+                <LayersIcon sx={{ color: 'primary.main', fontSize: 26 }} />
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2, color: 'secondary.main', fontFamily: '"Outfit", sans-serif' }}>
+                    {name || 'Interactive Orchestration Topology Map'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {project ? `${project} · ` : ''}Configure parameters in the Global Specs panel
+                  </Typography>
+                </Box>
               </Box>
 
               {/* Right: Actions */}
