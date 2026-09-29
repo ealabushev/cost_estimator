@@ -1058,3 +1058,41 @@ Content-Type: application/json
 Authorization: Basic {{username}}:{{password}}
 
 {}
+
+
+### parseTelemetryTrace
+# @name parseTelemetryTrace_POST
+POST {{server}}/api/v1/estimation/parseTelemetryTrace
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "telemetryData": "{}",
+  "baselineType": "median_p50"
+}
+
+
+### createTemplateFromTelemetry
+# @name createTemplateFromTelemetry_POST
+POST {{server}}/api/v1/estimation/createTemplateFromTelemetry
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "name": "Custom OTel Template",
+  "project": "Demo Project",
+  "description": "Template extracted from runtime trace",
+  "telemetryData": "{}",
+  "baselineType": "median_p50"
+}
+
+
+### deleteTemplate
+# @name deleteTemplate_POST
+POST {{server}}/api/v1/estimation/deleteTemplate
+Content-Type: application/json
+Authorization: Basic {{username}}:{{password}}
+
+{
+  "templateId": "00000000-0000-0000-0000-000000000001"
+}

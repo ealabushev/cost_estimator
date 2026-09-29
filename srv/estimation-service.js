@@ -614,32 +614,70 @@ module.exports = cds.service.impl(async function() {
      * Directly parses telemetry trace and persists as a reusable custom template in HANA
      */
     this.on('createTemplateFromTelemetry', async (req) => {
-        const { name, project, description, telemetryData, baselineType } = req.data;
-        if (!telemetryData) return req.reject(400, 'telemetryData is required');
+        const { name, project, description, telemetryData, baselineType, retryCalibrationMode, workflowDraft } = req.data;
+        if (!telemetryData && !workflowDraft) return req.reject(400, 'telemetryData or workflowDraft is required');
 
         try {
-            const spans = normalizeTracePayload(telemetryData);
-            const parsed = parseSpansToWorkflow(spans, {
-                name,
-                project,
-                baselineType: baselineType || 'median_p50'
-            });
+            let clientDraft = null;
+            if (workflowDraft) {
+                try {
+                    clientDraft = typeof workflowDraft === 'string' ? JSON.parse(workflowDraft) : workflowDraft;
+                } catch (e) {
+                    console.warn("Could not parse client workflowDraft:", e);
+                }
+            }
+
+            let spans = [];
+            let parsed = null;
+            if (telemetryData) {
+                try {
+                    spans = normalizeTracePayload(telemetryData);
+                    parsed = parseSpansToWorkflow(spans, {
+                        name,
+                        project,
+                        baselineType: baselineType || 'median_p50',
+                        retryCalibrationMode: retryCalibrationMode || 'baked_in'
+                    });
+                } catch (parseErr) {
+                    if (!clientDraft) throw parseErr;
+                }
+            }
 
             const dbModels = await SELECT.from(ModelConfigs);
-            const draft = parsed.workflowConfigDraft;
-            const supModelId = matchModel(draft.supervisorModelName, dbModels);
-            const synthModelId = draft.executionMode === 'parallel_map_reduce'
+            const draft = clientDraft || parsed?.workflowConfigDraft;
+            if (!draft) throw new Error('Could not derive workflow configuration from telemetry data');
+
+            const supModelId = draft.supervisorModel_ID || matchModel(draft.supervisorModelName, dbModels);
+            const synthModelId = draft.synthesizerModel_ID || (draft.executionMode === 'parallel_map_reduce'
                 ? matchModel(draft.synthesizerModelName, dbModels)
-                : null;
+                : null);
 
             const templateId = cds.utils.uuid();
+
+            // Assemble comprehensive telemetry ground truth metadata
+            const finalTelemetryMetadata = {
+                source: 'OpenTelemetry Trace Logs',
+                runsAnalyzed: draft.telemetryMetadata?.runsAnalyzed || parsed?.summary?.runsAnalyzed || 1,
+                totalSpansProcessed: draft.telemetryMetadata?.totalSpansProcessed || parsed?.summary?.totalSpans || spans.length || 0,
+                totalInputTokens: draft.telemetryMetadata?.totalInputTokens ?? parsed?.summary?.totalInputTokens ?? 0,
+                totalOutputTokens: draft.telemetryMetadata?.totalOutputTokens ?? parsed?.summary?.totalOutputTokens ?? 0,
+                avgInputTokensPerRun: draft.telemetryMetadata?.avgInputTokensPerRun ?? parsed?.summary?.avgInputTokensPerRun ?? 0,
+                avgOutputTokensPerRun: draft.telemetryMetadata?.avgOutputTokensPerRun ?? parsed?.summary?.avgOutputTokensPerRun ?? 0,
+                baselineType: baselineType || draft.telemetryMetadata?.baselineType || 'median_p50',
+                retryCalibrationMode: retryCalibrationMode || draft.telemetryMetadata?.retryCalibrationMode || 'baked_in',
+                routingCyclesStats: draft.telemetryMetadata?.routingCyclesStats || parsed?.workflowConfigDraft?.telemetryMetadata?.routingCyclesStats || null,
+                supervisorPromptTokens: draft.telemetryMetadata?.supervisorPromptTokens || Math.round(draft.supervisorSystemPromptTokens || 500),
+                detectedConcurrency: draft.telemetryMetadata?.detectedConcurrency || (draft.executionMode === 'parallel_map_reduce'),
+                overallCacheHitRate: draft.telemetryMetadata?.overallCacheHitRate || draft.estimatedCacheHitRate || 0,
+                ingestedAt: draft.telemetryMetadata?.ingestedAt || new Date().toISOString()
+            };
 
             // Insert WorkflowConfigs template record
             await INSERT.into(WorkflowConfigs).entries({
                 ID: templateId,
                 name: name || draft.name,
                 project: project || draft.project,
-                notes: description || `Created from OpenTelemetry trace logs (${parsed.summary.runsAnalyzed} runs analyzed)`,
+                notes: description || `Created from OpenTelemetry trace logs (${finalTelemetryMetadata.runsAnalyzed} runs analyzed)`,
                 orchestrationPattern: draft.orchestrationPattern || 'subagents_router',
                 executionMode: draft.executionMode || 'sequential',
                 stateMode: draft.stateMode || 'scoped_subgraph',
@@ -659,20 +697,21 @@ module.exports = cds.service.impl(async function() {
                 isPreset: false,
                 templateCategory: 'Telemetry Ingested',
                 telemetrySource: 'opentelemetry_otlp',
-                telemetryRunsCount: parsed.summary.runsAnalyzed || 1,
-                telemetryTotalSpans: parsed.summary.totalSpans || spans.length,
-                telemetryMetadata: JSON.stringify(draft.telemetryMetadata)
+                telemetryRunsCount: finalTelemetryMetadata.runsAnalyzed,
+                telemetryTotalSpans: finalTelemetryMetadata.totalSpansProcessed,
+                telemetryMetadata: JSON.stringify(finalTelemetryMetadata)
             });
 
             // Insert WorkerConfigs records
-            for (let i = 0; i < draft.workers.length; i++) {
-                const w = draft.workers[i];
-                const workerModelId = matchModel(w.modelName, dbModels);
+            const workersList = draft.workers || [];
+            for (let i = 0; i < workersList.length; i++) {
+                const w = workersList[i];
+                const workerModelId = w.model_ID || matchModel(w.modelName, dbModels);
                 await INSERT.into(WorkerConfigs).entries({
                     ID: cds.utils.uuid(),
                     workflow_ID: templateId,
                     name: w.name,
-                    roleDescription: `Agent extracted from OTel spans with ${w.toolCount} tools`,
+                    roleDescription: w.roleDescription || `Agent extracted from OTel spans with ${w.toolCount} tools`,
                     model_ID: workerModelId,
                     toolCount: parseInt(w.toolCount) || 1,
                     taskType: w.taskType || 'analysis',
@@ -692,10 +731,55 @@ module.exports = cds.service.impl(async function() {
             return {
                 templateId,
                 status: 'SUCCESS',
-                message: `Template '${name || draft.name}' created with ${draft.workers.length} workers from ${parsed.summary.runsAnalyzed} telemetry run(s).`
+                message: `Template '${name || draft.name}' created with ${workersList.length} workers from ${finalTelemetryMetadata.runsAnalyzed} telemetry run(s).`
             };
         } catch (err) {
             return req.reject(400, `Failed to create template from telemetry: ${err.message}`);
+        }
+    });
+
+    /**
+     * ACTION: deleteTemplate
+     * Deletes a saved custom template and its associated worker configs from HANA.
+     */
+    this.on('deleteTemplate', async (req) => {
+        const { templateId } = req.data;
+        if (!templateId) return req.reject(400, 'templateId is required');
+
+        try {
+            const existing = await SELECT.one.from(WorkflowConfigs).where({ ID: templateId });
+            if (!existing) {
+                return req.reject(404, `Template with ID '${templateId}' not found`);
+            }
+
+            // Unlink any Estimations referencing this template workflow ID
+            await UPDATE(Estimations).set({ workflow_ID: null }).where({ workflow_ID: templateId });
+
+            // Delete associated WorkerConfigs
+            await DELETE.from(WorkerConfigs).where({ workflow_ID: templateId });
+
+            // Delete WorkflowConfigs template record
+            await DELETE.from(WorkflowConfigs).where({ ID: templateId });
+
+            return {
+                status: 'SUCCESS',
+                message: `Template '${existing.name || templateId}' deleted successfully.`
+            };
+        } catch (err) {
+            if (err.status || err.code || err.target) throw err;
+            return req.reject(500, `Failed to delete template: ${err.message}`);
+        }
+    });
+
+    /**
+     * Hook before DELETE on WorkflowConfigs:
+     * Cleans up child WorkerConfigs and unlinks Estimations before deleting a WorkflowConfig.
+     */
+    this.before('DELETE', 'WorkflowConfigs', async (req) => {
+        const id = req.data?.ID || req.params?.[0]?.ID || req.params?.[0];
+        if (id) {
+            await UPDATE(Estimations).set({ workflow_ID: null }).where({ workflow_ID: id });
+            await DELETE.from(WorkerConfigs).where({ workflow_ID: id });
         }
     });
 

@@ -18,7 +18,8 @@ import {
   Box, Grid, Card, CardContent, Typography, Button, TextField, Select,
   MenuItem, FormControl, InputLabel, FormControlLabel, Switch, Drawer,
   IconButton, Divider, Slider, Chip, Alert, CircularProgress, RadioGroup, Radio,
-  ListSubheader, Tooltip, InputAdornment, Paper
+  ListSubheader, Tooltip, InputAdornment, Paper,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -284,6 +285,9 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   const [customTemplates, setCustomTemplates] = useState([]);
   const [isTelemetryModalOpen, setIsTelemetryModalOpen] = useState(false);
   const [activeTelemetryBenchmark, setActiveTelemetryBenchmark] = useState(null);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
+  const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
+  const [activeCustomTemplateId, setActiveCustomTemplateId] = useState(null);
 
   // Template Gallery Search & Filter states
   const [templateSearch, setTemplateSearch] = useState('');
@@ -385,6 +389,13 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                 refinementIterations: toInteger(w.refinementIterations, 1)
               })));
             }
+            if (data.telemetryMetadata) {
+              let tplMeta = data.telemetryMetadata;
+              if (typeof tplMeta === 'string') {
+                try { tplMeta = JSON.parse(tplMeta); } catch (e) { tplMeta = null; }
+              }
+              setActiveTelemetryBenchmark(tplMeta || null);
+            }
             setTriggerAutoLayout(true);
           }
         })
@@ -451,27 +462,39 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       const res = await fetch('/api/v1/estimation/WorkflowConfigs?$filter=isTemplate eq true&$expand=workers');
       if (res.ok) {
         const data = await res.json();
-        const templates = (data.value || []).map(t => ({
-          ...t,
-          isCustomTemplate: true,
-          description: t.notes || `Custom template with ${t.workers?.length || 0} agents (${t.telemetrySource || 'manual'})`,
-          workers: (t.workers || []).map(w => ({
-            name: w.name,
-            model_ID: w.model_ID,
-            toolCount: w.toolCount,
-            taskType: w.taskType,
-            avgObservationTokens: w.avgObservationTokens,
-            basePromptTokens: w.basePromptTokens,
-            avgOutputTokensPerHop: w.avgOutputTokensPerHop,
-            retryProbability: w.retryProbability,
-            executionMode: w.executionMode,
-            parallelInstances: w.parallelInstances,
-            isReflectorNode: w.isReflectorNode,
-            refinementIterations: w.refinementIterations,
-            avgToolHops: w.avgToolHops,
-            useCustomToolHops: w.useCustomToolHops
-          }))
-        }));
+        const templates = (data.value || []).map(t => {
+          let parsedMeta = t.telemetryMetadata;
+          if (typeof parsedMeta === 'string') {
+            try {
+              parsedMeta = JSON.parse(parsedMeta);
+            } catch (e) {
+              console.warn("Could not parse telemetryMetadata for template:", t.name, e);
+              parsedMeta = null;
+            }
+          }
+          return {
+            ...t,
+            isCustomTemplate: true,
+            telemetryMetadata: parsedMeta,
+            description: t.notes || `Custom template with ${t.workers?.length || 0} agents (${t.telemetrySource || 'manual'})`,
+            workers: (t.workers || []).map(w => ({
+              name: w.name,
+              model_ID: w.model_ID,
+              toolCount: w.toolCount,
+              taskType: w.taskType,
+              avgObservationTokens: w.avgObservationTokens,
+              basePromptTokens: w.basePromptTokens,
+              avgOutputTokensPerHop: w.avgOutputTokensPerHop,
+              retryProbability: w.retryProbability,
+              executionMode: w.executionMode,
+              parallelInstances: w.parallelInstances,
+              isReflectorNode: w.isReflectorNode,
+              refinementIterations: w.refinementIterations,
+              avgToolHops: w.avgToolHops,
+              useCustomToolHops: w.useCustomToolHops
+            }))
+          };
+        });
         setCustomTemplates(templates);
       }
     } catch (err) {
@@ -482,6 +505,46 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   useEffect(() => {
     fetchCustomTemplates();
   }, [fetchCustomTemplates]);
+
+  // Delete saved custom template from database
+  const handleDeleteTemplate = async () => {
+    if (!templateToDelete) return;
+    setIsDeletingTemplate(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch('/api/v1/estimation/deleteTemplate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId: templateToDelete.ID })
+      });
+
+      if (!res.ok) {
+        // Fallback to standard OData DELETE if action fails
+        const fallbackRes = await fetch(`/api/v1/estimation/WorkflowConfigs(${templateToDelete.ID})`, {
+          method: 'DELETE'
+        });
+        if (!fallbackRes.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error?.message || 'Failed to delete template from database');
+        }
+      }
+
+      setCustomTemplates(prev => prev.filter(t => t.ID !== templateToDelete.ID));
+      if (activeCustomTemplateId === templateToDelete.ID) {
+        setActiveCustomTemplateId(null);
+        setIsTemplateSelected(false);
+        if (onLoadWorkflow) onLoadWorkflow(null);
+      }
+      setSuccessMsg(`Template "${templateToDelete.name || 'Custom Template'}" was deleted successfully.`);
+      setTemplateToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete template:", err);
+      setErrorMsg(err.message || "Failed to delete template");
+    } finally {
+      setIsDeletingTemplate(false);
+    }
+  };
 
   // Extract distinct Customer / Domain values across custom templates and presets
   const allTemplateProjects = useMemo(() => {
@@ -609,6 +672,11 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
   // Handle template selection
   const handleApplyTemplate = (preset) => {
+    if (preset.isCustomTemplate && preset.ID) {
+      setActiveCustomTemplateId(preset.ID);
+    } else {
+      setActiveCustomTemplateId(null);
+    }
     setName(preset.name || 'Calibrated Workflow');
     setProject(preset.project || 'Default Project');
     setExecutionMode(preset.executionMode || 'sequential');
@@ -630,7 +698,15 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     if (preset.avgToolSchemaTokens !== undefined) {
       setAvgToolSchemaTokens(preset.avgToolSchemaTokens);
     }
-    setActiveTelemetryBenchmark(preset.telemetryMetadata || null);
+    let tplMetadata = preset.telemetryMetadata;
+    if (typeof tplMetadata === 'string') {
+      try {
+        tplMetadata = JSON.parse(tplMetadata);
+      } catch (e) {
+        tplMetadata = null;
+      }
+    }
+    setActiveTelemetryBenchmark(tplMetadata || null);
 
     // Map worker models based on fetched model list
     if (models.length > 0) {
@@ -1453,22 +1529,45 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                 }}
               >
                 <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 40 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'secondary.main', lineHeight: 1.2, fontSize: '1rem' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 40, gap: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'secondary.main', lineHeight: 1.2, fontSize: '1rem', flex: 1, minWidth: 0 }}>
                       {t.name}
                     </Typography>
-                    <Chip 
-                      label={t.telemetryRunsCount ? `OTel (${t.telemetryRunsCount} runs)` : "Custom Template"} 
-                      size="small" 
-                      color="success"
-                      sx={{ 
-                        fontWeight: 700, 
-                        fontSize: '10px', 
-                        height: 20, 
-                        flexShrink: 0,
-                        ml: 1
-                      }} 
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                      <Chip 
+                        label={t.telemetryRunsCount ? `OTel (${t.telemetryRunsCount} runs)` : "Custom Template"} 
+                        size="small" 
+                        color="success"
+                        sx={{ 
+                          fontWeight: 700, 
+                          fontSize: '10px', 
+                          height: 20, 
+                          flexShrink: 0
+                        }} 
+                      />
+                      <Tooltip title="Delete Template">
+                        <IconButton
+                          size="small"
+                          aria-label={`Delete ${t.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTemplateToDelete(t);
+                          }}
+                          sx={{
+                            color: 'text.secondary',
+                            p: 0.5,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                              color: 'error.main',
+                              bgcolor: 'rgba(239, 68, 68, 0.1)',
+                              transform: 'scale(1.1)'
+                            }
+                          }}
+                        >
+                          <DeleteIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </Box>
 
                   {/* Customer / Project Badge & Creator */}
@@ -1530,6 +1629,14 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                         {t.workers?.length || 0} agents
                       </Typography>
                     </Box>
+                    {t.telemetryMetadata && (t.telemetryMetadata.totalInputTokens || t.telemetryMetadata.avgInputTokensPerRun) ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 0.5, borderTop: '1px dashed #cbd5e1' }}>
+                        <Typography variant="caption" sx={{ color: 'success.dark', fontWeight: 600 }}>Ground Truth:</Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'success.main' }}>
+                          {(((t.telemetryMetadata.avgInputTokensPerRun || t.telemetryMetadata.totalInputTokens || 0) + (t.telemetryMetadata.avgOutputTokensPerRun || t.telemetryMetadata.totalOutputTokens || 0))).toLocaleString()} tok/run
+                        </Typography>
+                      </Box>
+                    ) : null}
                   </Box>
 
                   <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto', minHeight: 22, alignItems: 'center' }}>
@@ -1804,9 +1911,17 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     color="success" 
                     sx={{ height: 20, fontSize: 10, fontWeight: 700 }} 
                   />
-                  <Typography variant="caption" sx={{ color: '#166534', fontWeight: 600 }}>
-                    1 Run Measured: <strong>{(activeTelemetryBenchmark.totalInputTokens || 0).toLocaleString()} input</strong> · <strong>{(activeTelemetryBenchmark.totalOutputTokens || 0).toLocaleString()} output</strong> (Total: {((activeTelemetryBenchmark.totalInputTokens || 0) + (activeTelemetryBenchmark.totalOutputTokens || 0)).toLocaleString()} tokens)
-                  </Typography>
+                  {(() => {
+                    const runs = activeTelemetryBenchmark.runsAnalyzed || 1;
+                    const inTok = activeTelemetryBenchmark.avgInputTokensPerRun || activeTelemetryBenchmark.totalInputTokens || 0;
+                    const outTok = activeTelemetryBenchmark.avgOutputTokensPerRun || activeTelemetryBenchmark.totalOutputTokens || 0;
+                    const totalTok = inTok + outTok;
+                    return (
+                      <Typography variant="caption" sx={{ color: '#166534', fontWeight: 600 }}>
+                        {runs} {runs === 1 ? 'Run' : 'Runs'} Measured: <strong>{inTok.toLocaleString()} input</strong> · <strong>{outTok.toLocaleString()} output</strong> (Total: {totalTok.toLocaleString()} tokens/run)
+                      </Typography>
+                    );
+                  })()}
                 </Box>
                 <Typography variant="caption" sx={{ color: '#15803d', fontSize: 11 }}>
                   Sanity Check: Run <strong>Quick Estimate</strong> (with Volume = 1) to verify calibration against trace ground truth.
@@ -1863,12 +1978,36 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                   variant="text" 
                   onClick={() => {
                     onLoadWorkflow(null);
+                    setActiveCustomTemplateId(null);
                     setIsTemplateSelected(false);
                   }}
                   sx={{ color: 'text.secondary', textTransform: 'none', fontWeight: 600, fontSize: 12 }}
                 >
                   Reset
                 </Button>
+                {activeCustomTemplateId && (
+                  <>
+                    <Divider orientation="vertical" flexItem sx={{ my: 0.5 }} />
+                    <Button 
+                      size="small" 
+                      startIcon={<DeleteIcon />} 
+                      variant="text" 
+                      onClick={() => {
+                        const tpl = customTemplates.find(t => t.ID === activeCustomTemplateId) || { ID: activeCustomTemplateId, name };
+                        setTemplateToDelete(tpl);
+                      }}
+                      sx={{ 
+                        color: 'error.main', 
+                        textTransform: 'none', 
+                        fontWeight: 600, 
+                        fontSize: 12,
+                        '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.08)' } 
+                      }}
+                    >
+                      Delete Template
+                    </Button>
+                  </>
+                )}
                 <Divider orientation="vertical" flexItem sx={{ my: 0.5 }} />
                 <Button 
                   size="small" 
@@ -2387,6 +2526,65 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           setSuccessMsg(`Template "${savedTpl?.name || 'Custom Template'}" saved successfully and added to your template library.`);
         }}
       />
+
+      {/* Delete Template Confirmation Dialog */}
+      <Dialog
+        open={Boolean(templateToDelete)}
+        onClose={() => !isDeletingTemplate && setTemplateToDelete(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3, p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: 'secondary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteIcon color="error" />
+          Delete Saved Template
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.primary', mb: 2 }}>
+            Are you sure you want to delete the template <strong>"{templateToDelete?.name}"</strong>?
+          </DialogContentText>
+          {templateToDelete && (
+            <Box sx={{ bgcolor: '#f8fafc', p: 1.5, borderRadius: 2, border: '1px solid #e2e8f0', fontSize: 13 }}>
+              <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.5 }}>
+                <strong>Customer / Project:</strong> {templateToDelete.project || 'Default Project'}
+              </Typography>
+              <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.5 }}>
+                <strong>Worker Agents:</strong> {templateToDelete.workers?.length || 0} agent(s)
+              </Typography>
+              {templateToDelete.createdBy && (
+                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                  <strong>Created By:</strong> {templateToDelete.createdBy}
+                </Typography>
+              )}
+            </Box>
+          )}
+          <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 2, fontWeight: 500 }}>
+            This action cannot be undone. The template and its agent topology will be permanently removed.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setTemplateToDelete(null)}
+            disabled={isDeletingTemplate}
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={isDeletingTemplate ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+            onClick={handleDeleteTemplate}
+            disabled={isDeletingTemplate}
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+          >
+            {isDeletingTemplate ? 'Deleting...' : 'Delete Template'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

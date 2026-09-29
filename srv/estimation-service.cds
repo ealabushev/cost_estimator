@@ -63,15 +63,25 @@ service EstimationService @(path: '/api/v1/estimation', cds.server.body_parser.l
 
     // Persist a calibrated workflow template derived from OpenTelemetry traces into HANA
     action createTemplateFromTelemetry(
-        name          : String,
-        project       : String,
-        description   : String,
-        telemetryData : LargeString,
-        baselineType  : String // 'median_p50' or 'conservative_p90'
+        name                 : String,
+        project              : String,
+        description          : String,
+        telemetryData        : LargeString,
+        baselineType         : String, // 'median_p50' or 'conservative_p90'
+        retryCalibrationMode : String, // 'baked_in' or 'decomposed'
+        workflowDraft        : LargeString // Optional client-calibrated JSON draft
     ) returns {
         templateId    : UUID;
         status        : String;
         message       : String;
+    };
+
+    // Delete a saved custom workflow template from HANA
+    action deleteTemplate(
+        templateId : UUID
+    ) returns {
+        status  : String;
+        message : String;
     };
 
     // Refresh pricing from SAP GenAI Hub supported provider APIs

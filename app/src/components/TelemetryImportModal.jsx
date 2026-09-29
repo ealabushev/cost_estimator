@@ -196,13 +196,21 @@ export default function TelemetryImportModal({
     setIsSaving(true);
     setErrorMsg(null);
 
-    const draft = parsedResult.workflowConfigDraft;
+    const draft = {
+      ...parsedResult.workflowConfigDraft,
+      name: templateName || parsedResult.workflowConfigDraft.name,
+      project: projectName || parsedResult.workflowConfigDraft.project,
+      tags: templateTags || parsedResult.workflowConfigDraft.tags
+    };
+
     const payload = {
-      name: templateName || draft.name,
-      project: projectName || draft.project,
+      name: draft.name,
+      project: draft.project,
       description: `Calibrated from ${parsedResult.summary.runsAnalyzed} OpenTelemetry agent run(s) [${baselineType}]`,
       telemetryData: rawText,
-      baselineType
+      baselineType,
+      retryCalibrationMode,
+      workflowDraft: JSON.stringify(draft)
     };
 
     try {
@@ -226,7 +234,10 @@ export default function TelemetryImportModal({
           ID: resData.templateId,
           name: payload.name,
           project: payload.project,
-          isTemplate: true
+          isTemplate: true,
+          telemetryRunsCount: parsedResult.summary.runsAnalyzed || 1,
+          telemetryTotalSpans: parsedResult.summary.totalSpans || 0,
+          telemetryMetadata: draft.telemetryMetadata
         });
       }
 
