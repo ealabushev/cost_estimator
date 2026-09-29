@@ -559,6 +559,12 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     if (preset.supervisorSystemPromptTokens) {
       setSupervisorSystemPromptTokens(preset.supervisorSystemPromptTokens);
     }
+    if (preset.workerRegistryTokens !== undefined) {
+      setWorkerRegistryTokens(preset.workerRegistryTokens);
+    }
+    if (preset.avgToolSchemaTokens !== undefined) {
+      setAvgToolSchemaTokens(preset.avgToolSchemaTokens);
+    }
     setActiveTelemetryBenchmark(preset.telemetryMetadata || null);
 
     // Map worker models based on fetched model list

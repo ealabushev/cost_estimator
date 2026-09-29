@@ -622,6 +622,7 @@ function parseSpansToWorkflow(spans, options = {}) {
     useCustomRoutingCycles: true,
     supervisorModelName,
     supervisorSystemPromptTokens: Math.round(chosenSupervisorPrompt),
+    workerRegistryTokens: 0,
     avgToolSchemaTokens: 0,
     synthesizerModelName: executionMode === 'parallel_map_reduce' ? 'gpt-4o-mini' : null,
     promptCachingEnabled: cacheHitRate > 0.05,
