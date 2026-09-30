@@ -18,7 +18,7 @@ import {
   Box, Grid, Card, CardContent, Typography, Button, TextField, Select,
   MenuItem, FormControl, InputLabel, FormControlLabel, Switch, Drawer,
   IconButton, Divider, Slider, Chip, Alert, CircularProgress, RadioGroup, Radio,
-  ListSubheader, Tooltip, InputAdornment, Paper,
+  ListSubheader, Tooltip, InputAdornment, Paper, FormHelperText,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -2166,26 +2166,46 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                       </Select>
                     </FormControl>
 
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Task Type</InputLabel>
-                      <Select 
-                        value={workers[selectedWorkerIndex].taskType} 
-                        label="Task Type" 
-                        onChange={(e) => handleWorkerChange('taskType', e.target.value)}
-                      >
-                        <MenuItem value="simple_lookup">Simple Lookup (Material Master, etc.)</MenuItem>
-                        <MenuItem value="retrieval_response">Retrieval & Response (RAG lookup)</MenuItem>
-                        <MenuItem value="analysis">Analysis (Discrepancy review)</MenuItem>
-                        <MenuItem value="transformation">Transformation (BAPI posting preparation)</MenuItem>
-                        <MenuItem value="multi_step_reasoning">Multi-Step Reasoning (Complex checking)</MenuItem>
-                        <MenuItem value="erp_data_pipeline">ERP Data Pipeline (Batch reconciliation)</MenuItem>
-                      </Select>
-                    </FormControl>
+                    <Tooltip 
+                      arrow 
+                      placement="top" 
+                      title="Sets the worker's operational profile and base tool execution hops (L): Simple Lookup (1 hop), Retrieval & Response (2 hops), Analysis (3 hops), Transformation (4 hops), Multi-Step Reasoning (6 hops), ERP Data Pipeline (8 hops). Total hops = base hops + 0.5 per 5 bound tools (when Override is OFF)."
+                    >
+                      <FormControl fullWidth size="small">
+                        <InputLabel id="worker-task-type-label">Task Type</InputLabel>
+                        <Select 
+                          labelId="worker-task-type-label"
+                          value={workers[selectedWorkerIndex].taskType} 
+                          label="Task Type" 
+                          onChange={(e) => handleWorkerChange('taskType', e.target.value)}
+                        >
+                          <MenuItem value="simple_lookup">Simple Lookup (Material Master · 1 hop)</MenuItem>
+                          <MenuItem value="retrieval_response">Retrieval & Response (RAG lookup · 2 hops)</MenuItem>
+                          <MenuItem value="analysis">Analysis (Discrepancy review · 3 hops)</MenuItem>
+                          <MenuItem value="transformation">Transformation (BAPI prep · 4 hops)</MenuItem>
+                          <MenuItem value="multi_step_reasoning">Multi-Step Reasoning (Complex checking · 6 hops)</MenuItem>
+                          <MenuItem value="erp_data_pipeline">ERP Data Pipeline (Batch reconciliation · 8 hops)</MenuItem>
+                        </Select>
+                        <FormHelperText sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                          <span>Derives base tool hops when Override is OFF</span>
+                          <HelpOutlinedIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                        </FormHelperText>
+                      </FormControl>
+                    </Tooltip>
 
                     <Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        Bound Tools Count: <strong>{toInteger(workers[selectedWorkerIndex].toolCount, 0)}</strong>
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Bound Tools Count: <strong>{toInteger(workers[selectedWorkerIndex].toolCount, 0)}</strong>
+                        </Typography>
+                        <Tooltip 
+                          arrow 
+                          placement="top" 
+                          title="Number of function tools bound to this worker (via bind_tools). Injects schema overhead (toolCount × Tool Schema Tokens) into each hop's prompt, and increases auto-derived hops (+0.5 hops per 5 tools) when Override is OFF."
+                        >
+                          <HelpOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary', cursor: 'pointer' }} />
+                        </Tooltip>
+                      </Box>
                       <Slider
                         value={toInteger(workers[selectedWorkerIndex].toolCount, 0)}
                         onChange={(_, val) => handleWorkerChange('toolCount', val)}
@@ -2200,16 +2220,27 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                       <Chip label="Advanced Token & Hops Overrides" size="small" sx={{ fontSize: '10px', fontWeight: 600 }} />
                     </Divider>
 
-                    <FormControlLabel
-                      control={
-                        <Switch 
-                          checked={workers[selectedWorkerIndex].useCustomToolHops || false} 
-                          onChange={(e) => handleWorkerChange('useCustomToolHops', e.target.checked)} 
-                          size="small"
-                        />
-                      }
-                      label={<Typography variant="body2" sx={{ fontSize: '13px' }}>Override Derived Hops</Typography>}
-                    />
+                    <Tooltip 
+                      arrow 
+                      placement="top" 
+                      title="When OFF (default), tool execution hops are auto-derived from Task Type and Bound Tools Count (base hops + 0.5 hops per 5 tools). Toggle ON to manually specify a fixed hop count."
+                    >
+                      <FormControlLabel
+                        control={
+                          <Switch 
+                            checked={workers[selectedWorkerIndex].useCustomToolHops || false} 
+                            onChange={(e) => handleWorkerChange('useCustomToolHops', e.target.checked)} 
+                            size="small"
+                          />
+                        }
+                        label={
+                          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontSize: '13px' }}>Override Derived Hops</Typography>
+                            <HelpOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                          </Box>
+                        }
+                      />
+                    </Tooltip>
 
                     {workers[selectedWorkerIndex].useCustomToolHops ? (
                       <TextField 
@@ -2254,9 +2285,18 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     <Divider sx={{ my: 0.5 }} />
 
                     <Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        Stochastic Retry Rate: <strong>{Math.round(toNumber(workers[selectedWorkerIndex].retryProbability, 0.10) * 100)}%</strong>
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Stochastic Retry Rate: <strong>{Math.round(toNumber(workers[selectedWorkerIndex].retryProbability, 0.10) * 100)}%</strong>
+                        </Typography>
+                        <Tooltip 
+                          arrow 
+                          placement="top" 
+                          title="Per-invocation probability that a tool execution fails (timeouts, API rate limits, schema mismatch, BAPI lock conflicts). Used in Monte Carlo Risk Simulation to sample operational retries (via Binomial distribution) and in multi-scenario estimation to compute cost uplift. The visual canvas tile shows the 0% retry happy path."
+                        >
+                          <HelpOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary', cursor: 'pointer' }} />
+                        </Tooltip>
+                      </Box>
                       <Slider
                         value={toNumber(workers[selectedWorkerIndex].retryProbability, 0.10)}
                         onChange={(_, val) => handleWorkerChange('retryProbability', val)}

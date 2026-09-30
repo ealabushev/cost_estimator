@@ -207,7 +207,13 @@ module.exports = cds.service.impl(async function() {
                 const worker = workers[(cycle - 1) % workers.length];
                 const wp = workerPricings[worker.ID];
                 const L = await deriveWorkerToolHops(worker);
-                const retryMultiplier = 1 + sc.retryProb + (sc.retryProb * sc.retryProb);
+                const workerRetry = worker.retryProbability !== undefined && worker.retryProbability !== null && !isNaN(worker.retryProbability)
+                    ? Number.parseFloat(worker.retryProbability)
+                    : sc.retryProb;
+                const effectiveRetryProb = sc.name === 'optimistic'
+                    ? 0
+                    : (sc.name === 'fat_tail' ? Math.min(0.80, Math.max(0.3, workerRetry * 1.5)) : workerRetry);
+                const retryMultiplier = 1 + effectiveRetryProb + (effectiveRetryProb * effectiveRetryProb);
 
                 const res = computeCycleCostAndTokens({
                     worker,
@@ -334,7 +340,10 @@ module.exports = cds.service.impl(async function() {
                 const cycleCacheRate = baseCacheRate > 0 ? Math.max(0, Math.min(0.95, jStat.normal.sample(baseCacheRate, 0.1))) : 0;
                 const hopsL = Number.parseFloat(worker.avgToolHops) || 3;
                 const L = Math.max(1, Math.round(jStat.poisson.sample(hopsL)));
-                const retries = sampleBinomial(settings.maxRetriesPerCycle, baseRetryProb);
+                const workerRetryProb = worker.retryProbability !== undefined && worker.retryProbability !== null && !isNaN(worker.retryProbability)
+                    ? Number.parseFloat(worker.retryProbability)
+                    : baseRetryProb;
+                const retries = sampleBinomial(settings.maxRetriesPerCycle, workerRetryProb);
                 const retryMultiplier = 1 + retries;
 
                 const res = computeCycleCostAndTokens({
