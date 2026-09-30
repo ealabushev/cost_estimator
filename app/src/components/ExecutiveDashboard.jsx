@@ -335,9 +335,20 @@ export default function ExecutiveDashboard({ estimation, isMonteCarlo, onBack })
             Back to Builder
           </Button>
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary' }}>
-              Estimation Results
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                {estimation.workflowName ? `${estimation.workflowName}` : 'Estimation Results'}
+              </Typography>
+              {estimation.workflowVersion && (
+                <Chip 
+                  label={`v${estimation.workflowVersion}`} 
+                  size="small" 
+                  color="primary" 
+                  variant="outlined" 
+                  sx={{ fontWeight: 700, fontSize: 11, height: 22 }} 
+                />
+              )}
+            </Box>
             <Typography variant="body2" color="text.secondary">
               Click any scenario tile below to view its detailed per-cycle calculation breakdown.
             </Typography>

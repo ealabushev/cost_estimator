@@ -15,7 +15,7 @@ import '@xyflow/react/dist/style.css';
 
 
 import {
-  Box, Grid, Card, CardContent, Typography, Button, TextField, Select,
+  Box, Grid, Card, CardContent, Typography, Button, ButtonGroup, Menu, TextField, Select,
   MenuItem, FormControl, InputLabel, FormControlLabel, Switch, Drawer,
   IconButton, Divider, Slider, Chip, Alert, CircularProgress, RadioGroup, Radio,
   ListSubheader, Tooltip, InputAdornment, Paper, FormHelperText,
@@ -37,6 +37,8 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import BusinessIcon from '@mui/icons-material/Business';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
 
 import ExecutiveDashboard from './ExecutiveDashboard';
 import TelemetryImportModal from './TelemetryImportModal';
@@ -382,6 +384,12 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
   const [estimationResult, setEstimationResult] = useState(null);
   const [monteCarloMode, setMonteCarloMode] = useState(false);
 
+  // Workflow versioning state
+  const [version, setVersion] = useState(1);
+  const [rootWorkflowId, setRootWorkflowId] = useState(null);
+  const [estimateMenuAnchor, setEstimateMenuAnchor] = useState(null);
+  const [riskMenuAnchor, setRiskMenuAnchor] = useState(null);
+
   // Token Telemetry and Pricing State
   const [modelPricing, setModelPricing] = useState([]);
   const [showTokenOverlay, setShowTokenOverlay] = useState(true);
@@ -402,6 +410,8 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         .then(data => {
           if (!data.error && data.ID) {
             setName(data.name || 'Loaded Workflow');
+            setVersion(toInteger(data.version, 1));
+            setRootWorkflowId(data.rootWorkflowId || data.ID);
             setProject(data.project || '');
             setExecutionMode((data.orchestrationPattern === 'subagents_router' ? 'sequential' : data.orchestrationPattern) || 'sequential');
             setStateMode(data.stateMode || 'scoped_subgraph');
@@ -724,6 +734,8 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     } else {
       setActiveCustomTemplateId(null);
     }
+    setVersion(1);
+    setRootWorkflowId(null);
     setName(preset.name || 'Calibrated Workflow');
     setProject(preset.project || 'Default Project');
     setExecutionMode(preset.executionMode || 'sequential');
@@ -1182,16 +1194,21 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
 
   // Deep save the workflow config and invoke estimation
-  const handleRunEstimation = async (isMonteCarlo = false) => {
+  const handleRunEstimation = async (isMonteCarlo = false, saveMode = 'overwrite') => {
     setEstimating(true);
     setMonteCarloMode(isMonteCarlo);
     setErrorMsg(null);
 
     try {
+      const isNewVersion = saveMode === 'new_version' && Boolean(workflowId);
+      const targetVersion = isNewVersion ? (version || 1) + 1 : (version || 1);
+
       // 1. Save workflow config metadata
       const workflowData = {
         name,
         project,
+        version: targetVersion,
+        rootWorkflowId: rootWorkflowId || (workflowId ? workflowId : null),
         orchestrationPattern: executionMode || 'sequential',
         stateMode,
         complexityProfile,
@@ -1210,9 +1227,9 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         avgToolSchemaTokens: toInteger(avgToolSchemaTokens, 250),
       };
 
-      let workflowDbId = workflowId;
+      let workflowDbId = isNewVersion ? null : workflowId;
       
-      // If it's a new workflow, POST to create
+      // If it's a new workflow or a new version, POST to create
       if (!workflowDbId) {
         const createRes = await fetch('/api/v1/estimation/WorkflowConfigs', {
           method: 'POST',
@@ -1222,6 +1239,12 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         const createdObj = await createRes.json();
         if (createdObj.error) throw new Error(createdObj.error.message);
         workflowDbId = createdObj.ID;
+        setVersion(targetVersion);
+        if (!rootWorkflowId && workflowId) {
+          setRootWorkflowId(workflowId);
+        } else if (!rootWorkflowId) {
+          setRootWorkflowId(workflowDbId);
+        }
       } else {
         // PATCH existing workflow config
         const updateRes = await fetch(`/api/v1/estimation/WorkflowConfigs(${workflowDbId})`, {
@@ -1894,9 +1917,18 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <LayersIcon sx={{ color: 'primary.main', fontSize: 26 }} />
                 <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2, color: 'secondary.main', fontFamily: '"Outfit", sans-serif' }}>
-                    {name || 'Interactive Orchestration Topology Map'}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2, color: 'secondary.main', fontFamily: '"Outfit", sans-serif' }}>
+                      {name || 'Interactive Orchestration Topology Map'}
+                    </Typography>
+                    <Chip 
+                      label={`v${version}`} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined" 
+                      sx={{ fontWeight: 700, fontSize: 11, height: 22 }} 
+                    />
+                  </Box>
                   <Typography variant="caption" color="text.secondary">
                     {project ? `${project} · ` : ''}Configure parameters in the Global Specs panel
                   </Typography>
@@ -1909,26 +1941,82 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                   <Tooltip 
                     arrow 
                     placement="bottom" 
-                    title="Deterministic Baseline: Calculates happy-path monthly TCO using static averages (no retries, fixed hops, static cache rates). Best for rapid iteration and architecture comparison during workflow design."
+                    title="Deterministic Baseline: Calculates happy-path monthly TCO using static averages. Overwrites current version or saves as new version via the dropdown."
                   >
                     <span style={{ display: 'inline-block' }}>
-                      <Button 
-                        size="small"
-                        variant="contained" 
-                        color="primary" 
-                        startIcon={estimating && !monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
-                        disabled={estimating || workers.length === 0}
-                        onClick={() => handleRunEstimation(false)}
-                        sx={{ fontWeight: 700 }}
-                      >
-                        {estimating && !monteCarloMode ? 'Calculating...' : 'Quick Estimate'}
-                      </Button>
+                      {workflowId ? (
+                        <ButtonGroup size="small" variant="contained" color="primary" disabled={estimating || workers.length === 0}>
+                          <Button 
+                            startIcon={estimating && !monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+                            onClick={() => handleRunEstimation(false, 'overwrite')}
+                            sx={{ fontWeight: 700 }}
+                          >
+                            {estimating && !monteCarloMode ? 'Calculating...' : 'Quick Estimate'}
+                          </Button>
+                          <Button
+                            size="small"
+                            onClick={(e) => setEstimateMenuAnchor(e.currentTarget)}
+                            sx={{ px: 0.75 }}
+                          >
+                            <KeyboardArrowDownIcon sx={{ fontSize: 18 }} />
+                          </Button>
+                        </ButtonGroup>
+                      ) : (
+                        <Button 
+                          size="small"
+                          variant="contained" 
+                          color="primary" 
+                          startIcon={estimating && !monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+                          disabled={estimating || workers.length === 0}
+                          onClick={() => handleRunEstimation(false, 'overwrite')}
+                          sx={{ fontWeight: 700 }}
+                        >
+                          {estimating && !monteCarloMode ? 'Calculating...' : 'Quick Estimate'}
+                        </Button>
+                      )}
                     </span>
                   </Tooltip>
+                  <Menu
+                    anchorEl={estimateMenuAnchor}
+                    open={Boolean(estimateMenuAnchor)}
+                    onClose={() => setEstimateMenuAnchor(null)}
+                    PaperProps={{ sx: { minWidth: 260, p: 0.5 } }}
+                  >
+                    <MenuItem 
+                      onClick={() => {
+                        setEstimateMenuAnchor(null);
+                        handleRunEstimation(false, 'overwrite');
+                      }}
+                      sx={{ py: 1 }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        <RefreshIcon sx={{ fontSize: 18, color: 'text.secondary', mt: 0.25 }} />
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>Overwrite v{version}</Typography>
+                          <Typography variant="caption" color="text.secondary">Updates current config & replaces estimation</Typography>
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem 
+                      onClick={() => {
+                        setEstimateMenuAnchor(null);
+                        handleRunEstimation(false, 'new_version');
+                      }}
+                      sx={{ py: 1 }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        <LibraryAddIcon sx={{ fontSize: 18, color: 'primary.main', mt: 0.25 }} />
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>Save as New Version (v{version + 1})</Typography>
+                          <Typography variant="caption" color="text.secondary">Preserves v{version} and creates v{version + 1}</Typography>
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                  </Menu>
                   <Tooltip 
                     arrow 
                     placement="bottom" 
-                    title="Deterministic Baseline: Calculates happy-path monthly TCO using static averages (no retries, fixed hops, static cache rates). Best for rapid iteration and architecture comparison during workflow design."
+                    title="Deterministic Baseline: Calculates happy-path monthly TCO using static averages (no retries, fixed hops, static cache rates)."
                   >
                     <IconButton size="small" sx={{ color: 'text.secondary', p: 0.5 }}>
                       <HelpOutlinedIcon sx={{ fontSize: 16 }} />
@@ -1940,26 +2028,82 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                   <Tooltip 
                     arrow 
                     placement="bottom" 
-                    title="Stochastic Risk Modeling: Runs 1,000 simulations injecting real-world variances (Poisson hops, retry loops, cache fluctuations) to predict P90 budget ceilings and P99 tail risk. Best for executive sign-off and stress-testing."
+                    title="Stochastic Risk Modeling: Runs 1,000 simulations injecting real-world variances to predict P90 budget ceilings and P99 tail risk."
                   >
                     <span style={{ display: 'inline-block' }}>
-                      <Button 
-                        size="small"
-                        variant="outlined" 
-                        color="primary" 
-                        startIcon={estimating && monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <BarChartIcon />}
-                        disabled={estimating || workers.length === 0}
-                        onClick={() => handleRunEstimation(true)}
-                        sx={{ fontWeight: 700 }}
-                      >
-                        {estimating && monteCarloMode ? 'Simulating...' : 'Risk Simulation'}
-                      </Button>
+                      {workflowId ? (
+                        <ButtonGroup size="small" variant="outlined" color="primary" disabled={estimating || workers.length === 0}>
+                          <Button 
+                            startIcon={estimating && monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <BarChartIcon />}
+                            onClick={() => handleRunEstimation(true, 'overwrite')}
+                            sx={{ fontWeight: 700 }}
+                          >
+                            {estimating && monteCarloMode ? 'Simulating...' : 'Risk Simulation'}
+                          </Button>
+                          <Button
+                            size="small"
+                            onClick={(e) => setRiskMenuAnchor(e.currentTarget)}
+                            sx={{ px: 0.75 }}
+                          >
+                            <KeyboardArrowDownIcon sx={{ fontSize: 18 }} />
+                          </Button>
+                        </ButtonGroup>
+                      ) : (
+                        <Button 
+                          size="small"
+                          variant="outlined" 
+                          color="primary" 
+                          startIcon={estimating && monteCarloMode ? <CircularProgress size={16} color="inherit" /> : <BarChartIcon />}
+                          disabled={estimating || workers.length === 0}
+                          onClick={() => handleRunEstimation(true, 'overwrite')}
+                          sx={{ fontWeight: 700 }}
+                        >
+                          {estimating && monteCarloMode ? 'Simulating...' : 'Risk Simulation'}
+                        </Button>
+                      )}
                     </span>
                   </Tooltip>
+                  <Menu
+                    anchorEl={riskMenuAnchor}
+                    open={Boolean(riskMenuAnchor)}
+                    onClose={() => setRiskMenuAnchor(null)}
+                    PaperProps={{ sx: { minWidth: 260, p: 0.5 } }}
+                  >
+                    <MenuItem 
+                      onClick={() => {
+                        setRiskMenuAnchor(null);
+                        handleRunEstimation(true, 'overwrite');
+                      }}
+                      sx={{ py: 1 }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        <RefreshIcon sx={{ fontSize: 18, color: 'text.secondary', mt: 0.25 }} />
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>Overwrite v{version}</Typography>
+                          <Typography variant="caption" color="text.secondary">Updates current config & replaces estimation</Typography>
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem 
+                      onClick={() => {
+                        setRiskMenuAnchor(null);
+                        handleRunEstimation(true, 'new_version');
+                      }}
+                      sx={{ py: 1 }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        <LibraryAddIcon sx={{ fontSize: 18, color: 'primary.main', mt: 0.25 }} />
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>Save as New Version (v{version + 1})</Typography>
+                          <Typography variant="caption" color="text.secondary">Preserves v{version} and creates v{version + 1}</Typography>
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                  </Menu>
                   <Tooltip 
                     arrow 
                     placement="bottom" 
-                    title="Stochastic Risk Modeling: Runs 1,000 simulations injecting real-world variances (Poisson hops, retry loops, cache fluctuations) to predict P90 budget ceilings and P99 tail risk. Best for executive sign-off and stress-testing."
+                    title="Stochastic Risk Modeling: Runs 1,000 simulations injecting real-world variances to predict P90 budget ceilings and P99 tail risk."
                   >
                     <IconButton size="small" sx={{ color: 'text.secondary', p: 0.5 }}>
                       <HelpOutlinedIcon sx={{ fontSize: 16 }} />
@@ -2430,6 +2574,25 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
 
                   {/* Content */}
                   <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1.5, bgcolor: '#f1f5f9', borderRadius: 1.5, border: '1px solid #e2e8f0' }}>
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Configuration Version</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: 'primary.main' }}>Version {version}</Typography>
+                      </Box>
+                      {workflowId && (
+                        <Button 
+                          size="small" 
+                          variant="outlined" 
+                          startIcon={<LibraryAddIcon sx={{ fontSize: 14 }} />}
+                          onClick={() => handleRunEstimation(false, 'new_version')}
+                          disabled={estimating || workers.length === 0}
+                          sx={{ textTransform: 'none', fontSize: 11, py: 0.25 }}
+                        >
+                          Branch v{version + 1}
+                        </Button>
+                      )}
+                    </Box>
+
                     <TextField 
                       label="Workflow Name" 
                       value={name} 

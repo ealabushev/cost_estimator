@@ -137,6 +137,22 @@ module.exports = cds.service.impl(async function() {
     }
 
     /**
+     * Helper: Clear existing estimation and child results for a workflow to enforce 1:1 relationship
+     */
+    async function clearExistingEstimation(workflowId) {
+        if (!workflowId) return;
+        const existing = await SELECT.from(Estimations).where({ workflow_ID: workflowId });
+        for (const est of existing) {
+            const scenarios = await SELECT.from(ScenarioResults).where({ estimation_ID: est.ID });
+            for (const sc of scenarios) {
+                await DELETE.from(PerCycleCostBreakdowns).where({ scenario_ID: sc.ID });
+            }
+            await DELETE.from(ScenarioResults).where({ estimation_ID: est.ID });
+            await DELETE.from(Estimations).where({ ID: est.ID });
+        }
+    }
+
+    /**
      * Helper: Derive base routing cycles M from Complexity Profile and worker count
      */
     async function deriveBaseRoutingCycles(workflow, workerCount) {
@@ -273,6 +289,9 @@ module.exports = cds.service.impl(async function() {
             }
         };
 
+        // 1:1 Overwrite: Clear any previous estimation for this specific workflow config version
+        await clearExistingEstimation(workflowId);
+
         await INSERT.into(Estimations).entries({
             ID: estimationId, workflow_ID: workflowId,
             capacityUnitsPerToken: capacityUnitsPerToken.toFixed(5),
@@ -288,7 +307,7 @@ module.exports = cds.service.impl(async function() {
         const executiveRoi = computeExecutiveRoi(volume, medianRes.monthlyTcoUsd, settings.analystRateUsd, settings.manualReviewMins);
 
         const summaryPayload = {
-            estimationId, workflowName: workflow.name, monthlyRunVolume: volume, currency: 'EUR', capacityUnitsPerToken, capacityUnitCostEur, executiveRoi,
+            estimationId, workflowName: workflow.name, workflowVersion: workflow.version || 1, monthlyRunVolume: volume, currency: 'EUR', capacityUnitsPerToken, capacityUnitCostEur, executiveRoi,
             scenarios: scenarioResultsData.map(s => ({
                 name: s.scenarioName, costPerRunUsd: s.costPerRunUsd, monthlyTcoUsd: s.monthlyTcoUsd,
                 costPerRunBtpCredits: s.costPerRunBtpCredits, monthlyTcoBtpCredits: s.monthlyTcoBtpCredits,
@@ -407,6 +426,9 @@ module.exports = cds.service.impl(async function() {
             genAiHubPricing: { capacityUnitsPerToken, capacityUnitCostEur, currency: 'EUR' }
         };
 
+        // 1:1 Overwrite: Clear any previous estimation for this specific workflow config version
+        await clearExistingEstimation(workflowId);
+
         await INSERT.into(Estimations).entries({
             ID: simulationId, workflow_ID: workflowId,
             capacityUnitsPerToken: capacityUnitsPerToken.toFixed(5),
@@ -462,7 +484,7 @@ module.exports = cds.service.impl(async function() {
         const executiveRoi = computeExecutiveRoi(volume, p50Usd, settings.analystRateUsd, settings.manualReviewMins);
 
         const summaryPayload = {
-            simulationId, workflowName: workflow.name, iterations, monthlyRunVolume: volume, currency: 'EUR', capacityUnitsPerToken, capacityUnitCostEur, executiveRiskProfile: {
+            simulationId, workflowName: workflow.name, workflowVersion: workflow.version || 1, iterations, monthlyRunVolume: volume, currency: 'EUR', capacityUnitsPerToken, capacityUnitCostEur, executiveRiskProfile: {
                 manualBaselineCostUsd: executiveRoi.manualBaselineCostUsd, p50ExpectedTcoUsd: p50Usd.toFixed(2), p50NetSavingsUsd: executiveRoi.monthlyNetSavingsUsd, p50RoiPercentage: executiveRoi.roiPercentage,
                 p90BudgetCeilingUsd: p90Usd.toFixed(2), p90BudgetCeilingBtpCredits: p90Btp.toFixed(2), p90ConservativeRoiPercentage: `${((executiveRoi.manualBaselineCostUsd - p90Usd) / (p90Usd || 1) * 100).toFixed(1)}%`,
                 valueAtRisk99Usd: var99Usd.toFixed(2), conditionalValueAtRisk99Usd: cvar99Usd.toFixed(2), varianceUsd: varianceUsd.toFixed(2), standardDeviationUsd: stdDevUsd.toFixed(2), coefficientOfVariation: (stdDevUsd / meanUsd).toFixed(3)
@@ -761,8 +783,8 @@ module.exports = cds.service.impl(async function() {
                 return req.reject(404, `Template with ID '${templateId}' not found`);
             }
 
-            // Unlink any Estimations referencing this template workflow ID
-            await UPDATE(Estimations).set({ workflow_ID: null }).where({ workflow_ID: templateId });
+            // Clear 1:1 associated Estimations (and scenarios/breakdowns)
+            await clearExistingEstimation(templateId);
 
             // Delete associated WorkerConfigs
             await DELETE.from(WorkerConfigs).where({ workflow_ID: templateId });
@@ -781,13 +803,67 @@ module.exports = cds.service.impl(async function() {
     });
 
     /**
+     * Helper: Extract target IDs from request regardless of whether invoked via OData HTTP or CDS CQL
+     */
+    function getTargetIds(req) {
+        if (req.data?.ID) return [req.data.ID];
+        if (req.params?.length > 0) {
+            const p = req.params[0];
+            if (typeof p === 'object' && p?.ID) return [p.ID];
+            if (typeof p === 'string') return [p];
+        }
+        if (req.query?.DELETE?.where) {
+            const where = req.query.DELETE.where;
+            for (let i = 0; i < where.length; i++) {
+                if (where[i]?.ref?.[0] === 'ID' && where[i + 1] === '=' && where[i + 2]?.val) {
+                    return [where[i + 2].val];
+                }
+            }
+        }
+        return [];
+    }
+
+    /**
+     * Hook before/after DELETE on Estimations:
+     * Enforces complete 1:1 cascade delete: deleting an estimation also removes
+     * its scenario breakdowns, its worker configs, and its specific workflow configuration version.
+     */
+    this.before('DELETE', 'Estimations', async (req) => {
+        const ids = getTargetIds(req);
+        if (ids.length === 0) return;
+        req._workflowsToDelete = [];
+        for (const estId of ids) {
+            const est = await SELECT.one.from(Estimations).where({ ID: estId });
+            if (est) {
+                if (est.workflow_ID) {
+                    req._workflowsToDelete.push(est.workflow_ID);
+                }
+                const scenarios = await SELECT.from(ScenarioResults).where({ estimation_ID: est.ID });
+                for (const sc of scenarios) {
+                    await DELETE.from(PerCycleCostBreakdowns).where({ scenario_ID: sc.ID });
+                }
+                await DELETE.from(ScenarioResults).where({ estimation_ID: est.ID });
+            }
+        }
+    });
+
+    this.after('DELETE', 'Estimations', async (data, req) => {
+        if (req._workflowsToDelete?.length > 0) {
+            for (const wfId of req._workflowsToDelete) {
+                await DELETE.from(WorkerConfigs).where({ workflow_ID: wfId });
+                await DELETE.from(WorkflowConfigs).where({ ID: wfId });
+            }
+        }
+    });
+
+    /**
      * Hook before DELETE on WorkflowConfigs:
-     * Cleans up child WorkerConfigs and unlinks Estimations before deleting a WorkflowConfig.
+     * Cleans up child WorkerConfigs and associated 1:1 Estimation before deleting a WorkflowConfig.
      */
     this.before('DELETE', 'WorkflowConfigs', async (req) => {
-        const id = req.data?.ID || req.params?.[0]?.ID || req.params?.[0];
-        if (id) {
-            await UPDATE(Estimations).set({ workflow_ID: null }).where({ workflow_ID: id });
+        const ids = getTargetIds(req);
+        for (const id of ids) {
+            await clearExistingEstimation(id);
             await DELETE.from(WorkerConfigs).where({ workflow_ID: id });
         }
     });

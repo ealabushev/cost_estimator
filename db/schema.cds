@@ -145,12 +145,17 @@ entity WorkflowConfigs : cuid, managed {
     telemetryRunsCount            : Integer default 0;          // Number of runs analyzed
     telemetryTotalSpans           : Integer default 0;          // Total spans processed
     telemetryMetadata             : LargeString;                // JSON snapshot: raw stats, P50/P90 distributions
+    // Versioning and 1:1 Estimation Lifecycle
+    version                       : Integer default 1;          // Explicit configuration version (1, 2, 3...)
+    rootWorkflowId                : UUID;                       // Lineage root ID linking all versions of this workflow family
+    estimation                    : Composition of one Estimations on estimation.workflow = $self;
 }
 
 // --- Output / Results Entities ---
 
+@assert.unique: { workflow: [workflow] }
 entity Estimations : cuid, managed {
-    workflow          : Association to WorkflowConfigs;
+    workflow          : Association to one WorkflowConfigs;
     scenarios         : Composition of many ScenarioResults on scenarios.estimation = $self;
     capacityUnitsPerToken : Decimal(12,5); // Conversion constant from API-cost-weighted tokens to Capacity Units
     capacityUnitCostEur   : Decimal(10,4); // EUR cost per Capacity Unit used for this estimation

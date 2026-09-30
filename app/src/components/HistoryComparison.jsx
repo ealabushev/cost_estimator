@@ -72,6 +72,8 @@ export default function HistoryComparison({ onLoadWorkflow }) {
         ID: est.ID,
         workflowId: est.workflow_ID,
         name: wf ? wf.name : 'Unknown Workflow',
+        version: wf ? (wf.version || 1) : 1,
+        rootWorkflowId: wf ? (wf.rootWorkflowId || wf.ID) : null,
         project: (wf?.project || 'Default').trim(),
         stateMode: wf ? wf.stateMode : 'scoped_subgraph',
         volume: wf ? wf.monthlyRunVolume : 10000,
@@ -156,16 +158,22 @@ export default function HistoryComparison({ onLoadWorkflow }) {
     setSortBy('date_desc');
   };
 
-  // Handle estimation deletion
+  // Handle estimation and workflow version deletion (1:1 cascade)
   const handleDelete = async (id) => {
     try {
+      const estToDelete = estimations.find(e => e.ID === id);
+      const wfId = estToDelete?.workflow_ID;
+
       const res = await fetch(`/api/v1/estimation/Estimations(${id})`, {
         method: 'DELETE'
       });
       if (res.status >= 400) throw new Error("Failed to delete estimation");
       
-      // Update list
+      // Update list: remove both estimation and associated workflow configuration version
       setEstimations(prev => prev.filter(e => e.ID !== id));
+      if (wfId) {
+        setWorkflows(prev => prev.filter(w => w.ID !== wfId));
+      }
       setSelectedIds(prev => prev.filter(x => x !== id));
       if (compareResult && (compareResult.est1.ID === id || compareResult.est2.ID === id)) {
         setCompareResult(null);
@@ -248,7 +256,7 @@ export default function HistoryComparison({ onLoadWorkflow }) {
             <Grid container spacing={3}>
               <Grid item xs={12} sm={5}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                  Baseline (A): {compareResult.est1.name}
+                  Baseline (A): {compareResult.est1.name} (v{compareResult.est1.version})
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Ran: {formatDate(compareResult.est1.createdAt)} | Volume: {compareResult.est1.volume.toLocaleString()}
@@ -271,7 +279,7 @@ export default function HistoryComparison({ onLoadWorkflow }) {
 
               <Grid item xs={12} sm={5}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                  Variant (B): {compareResult.est2.name}
+                  Variant (B): {compareResult.est2.name} (v{compareResult.est2.version})
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Ran: {formatDate(compareResult.est2.createdAt)} | Volume: {compareResult.est2.volume.toLocaleString()}
@@ -487,7 +495,16 @@ export default function HistoryComparison({ onLoadWorkflow }) {
                       />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{row.name}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{row.name}</Typography>
+                        <Chip 
+                          label={`v${row.version}`} 
+                          size="small" 
+                          color="primary" 
+                          variant="outlined" 
+                          sx={{ height: 20, fontSize: 10, fontWeight: 700 }} 
+                        />
+                      </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
                         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.3 }}>
                           <PersonIcon sx={{ fontSize: 13, color: 'text.secondary' }} /> {row.createdBy}
