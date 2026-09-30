@@ -12,6 +12,8 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
 // SCENARIO COLORS
 const SCENARIO_COLORS = {
@@ -160,24 +162,38 @@ const SCENARIO_PROFILES = {
 
 function ScenarioDeepDiveBanner({ scenarioName }) {
   const profile = SCENARIO_PROFILES[scenarioName] || SCENARIO_PROFILES.median;
-  const [showFullDetails, setShowFullDetails] = useState(true);
+  const [showFullDetails, setShowFullDetails] = useState(false);
 
   return (
     <Box sx={{
-      mb: 3,
-      p: 2.5,
+      mt: 2,
       borderRadius: 2.5,
       bgcolor: profile.bgColor,
       border: `1px solid ${profile.borderColor}`,
-      transition: 'all 0.2s ease-in-out'
+      transition: 'all 0.25s ease-in-out',
+      overflow: 'hidden'
     }}>
-      {/* Title & Key Parameter Badges */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
+      {/* Clickable Header Bar */}
+      <Box 
+        onClick={() => setShowFullDetails(!showFullDetails)}
+        sx={{ 
+          p: 2,
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          flexWrap: 'wrap', 
+          gap: 1.5,
+          cursor: 'pointer',
+          '&:hover': {
+            bgcolor: `${profile.color}0d`
+          }
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap' }}>
-          {profile.headerIcon === 'speed' && <SpeedIcon sx={{ color: profile.color, fontSize: 24 }} />}
-          {profile.headerIcon === 'trending' && <TrendingUpIcon sx={{ color: profile.color, fontSize: 24 }} />}
-          {profile.headerIcon === 'warning' && <WarningAmberIcon sx={{ color: profile.color, fontSize: 24 }} />}
-          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0f172a' }}>
+          {profile.headerIcon === 'speed' && <SpeedIcon sx={{ color: profile.color, fontSize: 22 }} />}
+          {profile.headerIcon === 'trending' && <TrendingUpIcon sx={{ color: profile.color, fontSize: 22 }} />}
+          {profile.headerIcon === 'warning' && <WarningAmberIcon sx={{ color: profile.color, fontSize: 22 }} />}
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0f172a', fontSize: '13.5px' }}>
             {profile.title}
           </Typography>
           <Chip 
@@ -193,108 +209,132 @@ function ScenarioDeepDiveBanner({ scenarioName }) {
             }} 
           />
         </Box>
-        <Button 
-          size="small" 
-          variant="text" 
-          onClick={() => setShowFullDetails(!showFullDetails)}
-          sx={{ textTransform: 'none', fontWeight: 600, fontSize: '12px', color: profile.color }}
-        >
-          {showFullDetails ? 'Collapse Deep Dive' : 'Expand In-Depth Mechanics'}
-        </Button>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: profile.color, display: { xs: 'none', sm: 'inline-block' } }}>
+            {showFullDetails ? 'Hide Deep Dive' : 'Methodology, Math & Governance'}
+          </Typography>
+          <Button 
+            size="small" 
+            variant="outlined"
+            endIcon={showFullDetails ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowFullDetails(!showFullDetails);
+            }}
+            sx={{ 
+              textTransform: 'none', 
+              fontWeight: 700, 
+              fontSize: '12px', 
+              borderColor: profile.borderColor,
+              color: profile.color,
+              bgcolor: '#ffffff',
+              '&:hover': {
+                bgcolor: '#ffffff',
+                borderColor: profile.color
+              }
+            }}
+          >
+            {showFullDetails ? 'Collapse' : 'Expand Deep Dive'}
+          </Button>
+        </Box>
       </Box>
 
-      {/* Parameter Chips Grid */}
-      <Grid container spacing={1.5} sx={{ mb: showFullDetails ? 2.5 : 0 }}>
-        {profile.parameters.map((param, idx) => (
-          <Grid item xs={12} sm={6} md={3} key={idx}>
-            <Tooltip title={param.tooltip} arrow placement="top">
+      {/* Expanded Content: Parameters + 3-Column Narrative */}
+      {showFullDetails && (
+        <Box sx={{ p: 2.5, pt: 0.5 }}>
+          {/* Parameter Chips Grid */}
+          <Grid container spacing={1.5} sx={{ mb: 2 }}>
+            {profile.parameters.map((param, idx) => (
+              <Grid item xs={12} sm={6} md={3} key={idx}>
+                <Tooltip title={param.tooltip} arrow placement="top">
+                  <Box sx={{ 
+                    p: 1.25, 
+                    borderRadius: 2, 
+                    bgcolor: '#ffffff', 
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    height: '100%',
+                    cursor: 'help'
+                  }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.25, textTransform: 'uppercase', fontSize: '10px', letterSpacing: '0.04em' }}>
+                      {param.label}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '12px' }}>
+                      {param.value}
+                    </Typography>
+                  </Box>
+                </Tooltip>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* 3-Column In-Depth Narrative */}
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
               <Box sx={{ 
-                p: 1.25, 
+                p: 2, 
                 borderRadius: 2, 
                 bgcolor: '#ffffff', 
-                border: '1px solid #e2e8f0',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                border: '1px solid #e2e8f0', 
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                 height: '100%',
-                cursor: 'help'
+                display: 'flex',
+                flexDirection: 'column'
               }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.25, textTransform: 'uppercase', fontSize: '10px', letterSpacing: '0.04em' }}>
-                  {param.label}
+                <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
+                  <InfoOutlinedIcon sx={{ fontSize: 16, color: profile.color }} />
+                  Real-World Operational Context
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '12px' }}>
-                  {param.value}
+                <Typography variant="body2" sx={{ color: '#334155', fontSize: '12.5px', lineHeight: 1.6 }}>
+                  {profile.operationalContext}
                 </Typography>
               </Box>
-            </Tooltip>
-          </Grid>
-        ))}
-      </Grid>
+            </Grid>
 
-      {/* Expanded Narrative 3-Column Breakdown */}
-      {showFullDetails && (
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
-            <Box sx={{ 
-              p: 2, 
-              borderRadius: 2, 
-              bgcolor: '#ffffff', 
-              border: '1px solid #e2e8f0', 
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
-                <InfoOutlinedIcon sx={{ fontSize: 16, color: profile.color }} />
-                Real-World Operational Context
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#334155', fontSize: '12.5px', lineHeight: 1.6 }}>
-                {profile.operationalContext}
-              </Typography>
-            </Box>
-          </Grid>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 2, 
+                bgcolor: '#ffffff', 
+                border: '1px solid #e2e8f0', 
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
+                  <CalculateOutlinedIcon sx={{ fontSize: 16, color: profile.color }} />
+                  Mathematical Mechanics & Token Math
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#334155', fontSize: '12.5px', lineHeight: 1.6 }}>
+                  {profile.mathematicalMechanics}
+                </Typography>
+              </Box>
+            </Grid>
 
-          <Grid item xs={12} md={4}>
-            <Box sx={{ 
-              p: 2, 
-              borderRadius: 2, 
-              bgcolor: '#ffffff', 
-              border: '1px solid #e2e8f0', 
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
-                <CalculateOutlinedIcon sx={{ fontSize: 16, color: profile.color }} />
-                Mathematical Mechanics & Token Math
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#334155', fontSize: '12.5px', lineHeight: 1.6 }}>
-                {profile.mathematicalMechanics}
-              </Typography>
-            </Box>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 2, 
+                bgcolor: '#ffffff', 
+                border: '1px solid #e2e8f0', 
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
+                  <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 16, color: profile.color }} />
+                  Executive Governance & Budget Role
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#334155', fontSize: '12.5px', lineHeight: 1.6 }}>
+                  {profile.budgetaryRole}
+                </Typography>
+              </Box>
+            </Grid>
           </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Box sx={{ 
-              p: 2, 
-              borderRadius: 2, 
-              bgcolor: '#ffffff', 
-              border: '1px solid #e2e8f0', 
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
-                <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 16, color: profile.color }} />
-                Executive Governance & Budget Role
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#334155', fontSize: '12.5px', lineHeight: 1.6 }}>
-                {profile.budgetaryRole}
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
+        </Box>
       )}
     </Box>
   );
@@ -474,9 +514,6 @@ export default function ExecutiveDashboard({ estimation, isMonteCarlo, onBack })
         </Box>
 
         <Box sx={{ p: 3 }}>
-          {/* Extensive Scenario Mechanics & Governance Banner */}
-          <ScenarioDeepDiveBanner scenarioName={scenarioName} />
-
           {loadingDetails ? (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, py: 6 }}>
               <CircularProgress size={24} />
@@ -549,6 +586,9 @@ export default function ExecutiveDashboard({ estimation, isMonteCarlo, onBack })
               <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.6, px: 1 }}>
                 Each row reads left to right: estimated tokens → converted Capacity Units → CU unit price → total EUR cost for that cycle. The <strong>Total</strong> row is the cost per run; the <strong>Monthly</strong> row is that same total scaled by monthly volume ({volume.toLocaleString()} runs). Cache discount already reduces the total CU price. Recorded cache-discount reference: {formatCurrency(cycleRows.reduce((sum, row) => sum + Number.parseFloat(row.cacheDiscountUsd || 0), 0), 6)} per run.
               </Typography>
+
+              {/* Extensive Scenario Mechanics & Governance Deep Dive (under table, collapsed by default) */}
+              <ScenarioDeepDiveBanner scenarioName={scenarioName} />
             </Box>
           )}
         </Box>
