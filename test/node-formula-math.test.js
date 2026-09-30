@@ -9,7 +9,7 @@ const assert = require('assert');
  */
 
 function simulateWorkerTelemetry({ hops, toolCount, basePrompt, avgObservationTokens, avgOutputTokensPerHop, avgToolSchemaTokens, thinkingMult = 0 }) {
-  const schemaTok = avgToolSchemaTokens || 250;
+  const schemaTok = Number.isFinite(Number(avgToolSchemaTokens)) ? Number(avgToolSchemaTokens) : 250;
   const toolSchemaTotal = toolCount * schemaTok;
   const obsTokens = avgObservationTokens || 1000;
   const hopOutTok = avgOutputTokensPerHop !== undefined ? avgOutputTokensPerHop : 300;
@@ -46,30 +46,42 @@ function simulateWorkerTelemetry({ hops, toolCount, basePrompt, avgObservationTo
 }
 
 function simulateSupervisorTelemetry({ supervisorSystemPromptTokens = 500, workerRegistryTokens = 200 }) {
-  const sysTok = Number(supervisorSystemPromptTokens) || 500;
-  const regTok = Number(workerRegistryTokens) || 200;
-  const histTok = 500;
-  const inputTokens = sysTok + regTok + histTok;
+  const sysTok = Number.isFinite(Number(supervisorSystemPromptTokens)) ? Number(supervisorSystemPromptTokens) : 500;
+  const regTok = Number.isFinite(Number(workerRegistryTokens)) ? Number(workerRegistryTokens) : 200;
+  const inputTokens = sysTok + regTok;
   const outputTokens = 150;
 
-  const formula = `• Input: ${inputTokens.toLocaleString()} tok = System Prompt (${sysTok}) + Worker Registry (${regTok}) + Routing Context History (${histTok})\n• Output: ${outputTokens.toLocaleString()} tok = Routing Decision / Worker Dispatch Payload\n• Total: ${(inputTokens + outputTokens).toLocaleString()} tokens (${inputTokens.toLocaleString()} in / ${outputTokens.toLocaleString()} out)`;
+  const breakdown = regTok > 0
+    ? `System Prompt (${sysTok}) + Worker Registry (${regTok})`
+    : `System Prompt (${sysTok}) + Worker Registry (0)`;
+
+  const formula = `• Input: ${inputTokens.toLocaleString()} tok = ${breakdown}\n• Output: ${outputTokens.toLocaleString()} tok = Routing Decision / Worker Dispatch Payload\n• Total: ${(inputTokens + outputTokens).toLocaleString()} tokens (${inputTokens.toLocaleString()} in / ${outputTokens.toLocaleString()} out)`;
 
   return { inputTokens, outputTokens, formula };
 }
 
 console.log('🧪 Running Canvas Formula & Tile Math Verification Test Suite...\n');
 
-// Test 1: Supervisor Node Tile vs Formula
-console.log('Test 1: Verifying Supervisor tile numbers vs hover formula...');
+// Test 1: Standard Supervisor Node Tile vs Formula (500 prompt + 200 registry)
+console.log('Test 1: Verifying Standard Supervisor tile numbers vs hover formula...');
 const sup = simulateSupervisorTelemetry({ supervisorSystemPromptTokens: 500, workerRegistryTokens: 200 });
-assert.strictEqual(sup.inputTokens, 1200, 'Supervisor input tokens must be 1,200');
+assert.strictEqual(sup.inputTokens, 700, 'Supervisor input tokens must be 700 (500 + 200)');
 assert.strictEqual(sup.outputTokens, 150, 'Supervisor output tokens must be 150');
-assert.ok(sup.formula.includes('1,200 tok'), 'Formula must contain total input 1,200 tok');
+assert.ok(sup.formula.includes('700 tok'), 'Formula must contain total input 700 tok');
 assert.ok(sup.formula.includes('150 tok'), 'Formula must contain output 150 tok');
 assert.ok(sup.formula.includes('System Prompt (500)'), 'Formula must explain System Prompt (500)');
 assert.ok(sup.formula.includes('Worker Registry (200)'), 'Formula must explain Worker Registry (200)');
-assert.ok(sup.formula.includes('Routing Context History (500)'), 'Formula must explain Routing Context History (500)');
-console.log('  ✅ Supervisor formula exactly matches tile (1,200 in / 150 out).');
+console.log('  ✅ Standard Supervisor formula matches tile (700 in / 150 out).');
+
+// Test 1b: Telemetry-derived Supervisor (192 prompt from trace, 0 worker registry since in prompt)
+console.log('\nTest 1b: Verifying Telemetry-derived Supervisor (192 tok prompt, 0 registry)...');
+const supOtel = simulateSupervisorTelemetry({ supervisorSystemPromptTokens: 192, workerRegistryTokens: 0 });
+assert.strictEqual(supOtel.inputTokens, 192, 'Supervisor input tokens must be exactly 192');
+assert.strictEqual(supOtel.outputTokens, 150, 'Supervisor output tokens must be 150');
+assert.ok(supOtel.formula.includes('192 tok'), 'Formula must contain total input 192 tok');
+assert.ok(supOtel.formula.includes('System Prompt (192)'), 'Formula must explain System Prompt (192)');
+assert.ok(supOtel.formula.includes('Worker Registry (0)'), 'Formula must explain Worker Registry (0)');
+console.log('  ✅ Telemetry-derived Supervisor formula matches tile (192 in / 150 out).');
 
 // Test 2: Worker Node with 2 Hops (Default Analysis) Tile vs Formula
 console.log('\nTest 2: Verifying Worker (2 Hops) tile numbers vs hover formula...');
@@ -124,5 +136,20 @@ assert.strictEqual(w1.outputTokens, 250, 'Single hop output must be 250');
 assert.ok(w1.formula.includes('900 tok'), 'Formula must show 900 tok');
 assert.ok(w1.formula.includes('250 tok'), 'Formula must show 250 tok');
 console.log('  ✅ Single-hop worker formula verified.');
+
+// Test 5: Worker with avgToolSchemaTokens = 0 (OTel calibrated)
+console.log('\nTest 5: Verifying Telemetry Worker with avgToolSchemaTokens = 0...');
+const wOtel = simulateWorkerTelemetry({
+  hops: 1,
+  toolCount: 3,
+  basePrompt: 5253,
+  avgObservationTokens: 1000,
+  avgOutputTokensPerHop: 300,
+  avgToolSchemaTokens: 0
+});
+assert.strictEqual(wOtel.inputTokens, 5253, 'Input tokens must equal basePrompt (5253) when avgToolSchemaTokens is 0');
+assert.strictEqual(wOtel.outputTokens, 300, 'Output tokens must be 300');
+assert.ok(wOtel.formula.includes('Tools (3 × 0 = 0)'), 'Formula must show 0 tools overhead');
+console.log('  ✅ Telemetry worker with 0 schema tokens verified.');
 
 console.log('\n🎉 ALL FORMULA AND TILE MATH VERIFICATION TESTS PASSED!\n');

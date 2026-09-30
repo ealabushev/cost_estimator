@@ -1015,8 +1015,12 @@ function computeCycleCostAndTokens(params) {
         capacityUnitsPerToken,
         capacityUnitCostEur
     } = params;
-    const supSysTok = workflow.supervisorSystemPromptTokens || 500;
-    const supRegTok = workflow.workerRegistryTokens || 200;
+    const supSysTok = workflow.supervisorSystemPromptTokens !== undefined && workflow.supervisorSystemPromptTokens !== null && !isNaN(workflow.supervisorSystemPromptTokens)
+        ? Number(workflow.supervisorSystemPromptTokens)
+        : 500;
+    const supRegTok = workflow.workerRegistryTokens !== undefined && workflow.workerRegistryTokens !== null && !isNaN(workflow.workerRegistryTokens)
+        ? Number(workflow.workerRegistryTokens)
+        : 200;
     const supInTokRaw = supSysTok + supRegTok + accumulatedHistoryTokens;
     const supCacheHitTok = Math.round(supInTokRaw * cacheHitRate);
     const supBillableInTok = supInTokRaw - supCacheHitTok;
@@ -1033,7 +1037,10 @@ function computeCycleCostAndTokens(params) {
     let currentHistory = accumulatedHistoryTokens;
 
     const basePrompt = worker.basePromptTokens !== undefined && worker.basePromptTokens !== null ? Number(worker.basePromptTokens) : 400;
-    const toolSchemaTok = (worker.toolCount || 0) * (workflow.avgToolSchemaTokens || 250);
+    const schemaTok = workflow.avgToolSchemaTokens !== undefined && workflow.avgToolSchemaTokens !== null && !isNaN(workflow.avgToolSchemaTokens)
+        ? Number(workflow.avgToolSchemaTokens)
+        : 250;
+    const toolSchemaTok = (worker.toolCount || 0) * schemaTok;
     const obsTok = worker.avgObservationTokens || 1000;
 
     for (let hop = 1; hop <= L; hop++) {

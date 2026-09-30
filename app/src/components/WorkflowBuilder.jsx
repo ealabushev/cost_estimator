@@ -735,14 +735,14 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     setMonthlyRunVolume(preset.monthlyRunVolume || 10000);
     setTags(preset.tags || 'erp');
     if (preset.notes) setNotes(preset.notes);
-    if (preset.supervisorSystemPromptTokens) {
-      setSupervisorSystemPromptTokens(preset.supervisorSystemPromptTokens);
+    if (preset.supervisorSystemPromptTokens !== undefined && preset.supervisorSystemPromptTokens !== null) {
+      setSupervisorSystemPromptTokens(toInteger(preset.supervisorSystemPromptTokens, 500));
     }
-    if (preset.workerRegistryTokens !== undefined) {
-      setWorkerRegistryTokens(preset.workerRegistryTokens);
+    if (preset.workerRegistryTokens !== undefined && preset.workerRegistryTokens !== null) {
+      setWorkerRegistryTokens(toInteger(preset.workerRegistryTokens, 200));
     }
-    if (preset.avgToolSchemaTokens !== undefined) {
-      setAvgToolSchemaTokens(preset.avgToolSchemaTokens);
+    if (preset.avgToolSchemaTokens !== undefined && preset.avgToolSchemaTokens !== null) {
+      setAvgToolSchemaTokens(toInteger(preset.avgToolSchemaTokens, 250));
     }
     let tplMetadata = preset.telemetryMetadata;
     if (typeof tplMetadata === 'string') {
@@ -920,16 +920,17 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
     let hopsCount = 1;
 
     if (nodeType === 'supervisor') {
-      const sysTok = Number(supervisorSystemPromptTokens) || 500;
-      const regTok = Number(workerRegistryTokens) || 200;
-      // In multi-agent routing, supervisor evaluates state and routes across cycles.
-      // Baseline routing request includes system prompt, worker tool registry, and routing context history (~500 tok).
-      const histTok = 500;
-      inputTokens = sysTok + regTok + histTok;
+      const sysTok = toInteger(supervisorSystemPromptTokens, 500);
+      const regTok = toInteger(workerRegistryTokens, 200);
+      inputTokens = sysTok + regTok;
       outputTokens = 150; // Standard routing decision / worker dispatch JSON call
       hopsCount = 1;
 
-      formula = `• Input: ${inputTokens.toLocaleString()} tok = System Prompt (${sysTok}) + Worker Registry (${regTok}) + Routing Context History (${histTok})\n• Output: ${outputTokens.toLocaleString()} tok = Routing Decision / Worker Dispatch Payload\n• Total: ${(inputTokens + outputTokens).toLocaleString()} tokens (${inputTokens.toLocaleString()} in / ${outputTokens.toLocaleString()} out)`;
+      const breakdown = regTok > 0
+        ? `System Prompt (${sysTok.toLocaleString()}) + Worker Registry (${regTok.toLocaleString()})`
+        : `System Prompt (${sysTok.toLocaleString()}) + Worker Registry (0)`;
+
+      formula = `• Input: ${inputTokens.toLocaleString()} tok = ${breakdown}\n• Output: ${outputTokens.toLocaleString()} tok = Routing Decision / Worker Dispatch Payload\n• Total: ${(inputTokens + outputTokens).toLocaleString()} tokens (${inputTokens.toLocaleString()} in / ${outputTokens.toLocaleString()} out)`;
     } else if (nodeType === 'synthesizer') {
       inputTokens = 1500;
       outputTokens = 500;
@@ -944,7 +945,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
       const obsTokens = workerConfig.avgObservationTokens || 1000;
       const basePrompt = workerConfig.basePromptTokens !== undefined && workerConfig.basePromptTokens !== null ? Number(workerConfig.basePromptTokens) : 400;
       const hopOutTok = workerConfig.avgOutputTokensPerHop !== undefined && workerConfig.avgOutputTokensPerHop !== null ? Number(workerConfig.avgOutputTokensPerHop) : 300;
-      const schemaTok = Number(avgToolSchemaTokens) || 250;
+      const schemaTok = toInteger(avgToolSchemaTokens, 250);
       const toolSchemaTotal = toolCount * schemaTok;
       
       let totalInput = 0;
@@ -1203,9 +1204,9 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
         notes,
         supervisorModel_ID: supervisorModelId,
         synthesizerModel_ID: executionMode === 'parallel_map_reduce' ? synthesizerModelId : null,
-        supervisorSystemPromptTokens: parseInt(supervisorSystemPromptTokens) || 500,
-        workerRegistryTokens: parseInt(workerRegistryTokens) || 200,
-        avgToolSchemaTokens: parseInt(avgToolSchemaTokens) || 250,
+        supervisorSystemPromptTokens: toInteger(supervisorSystemPromptTokens, 500),
+        workerRegistryTokens: toInteger(workerRegistryTokens, 200),
+        avgToolSchemaTokens: toInteger(avgToolSchemaTokens, 250),
       };
 
       let workflowDbId = workflowId;
