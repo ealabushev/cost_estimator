@@ -520,6 +520,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
           }
           return {
             ...t,
+            executionMode: t.executionMode || (parsedMeta?.detectedConcurrency ? 'parallel_map_reduce' : 'sequential'),
             isCustomTemplate: true,
             telemetryMetadata: parsedMeta,
             description: t.notes || `Custom template with ${t.workers?.length || 0} agents (${t.telemetrySource || 'manual'})`,
@@ -1692,7 +1693,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="caption" color="text.secondary">Orchestration:</Typography>
                       <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                        {t.executionMode === 'sequential' ? 'Sequential Hub' : 'Parallel Map-Reduce'}
+                        {t.executionMode === 'parallel_map_reduce' ? 'Parallel Map-Reduce' : 'Sequential Hub'}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -1839,7 +1840,7 @@ export default function WorkflowBuilder({ workflowId, initialEstimation, onLoadW
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="caption" color="text.secondary">Orchestration:</Typography>
                         <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                          {t.executionMode === 'sequential' ? 'Sequential Hub' : 'Parallel Map-Reduce'}
+                          {t.executionMode === 'parallel_map_reduce' ? 'Parallel Map-Reduce' : 'Sequential Hub'}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

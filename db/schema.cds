@@ -108,6 +108,7 @@ entity WorkflowConfigs : cuid, managed {
     project                       : String(100);          // Optional project/team identifier for data isolation within a tenant
     // Tier 0: Orchestration Pattern
     orchestrationPattern          : OrchestrationPattern default 'subagents_router';
+    executionMode                 : ExecutionMode default 'sequential';
     // Tier 1: Model Tiering
     supervisorModel               : Association to ModelConfigs; // Required central coordinator / router
     synthesizerModel              : Association to ModelConfigs; // Optional; used when executionMode = 'parallel_map_reduce'
